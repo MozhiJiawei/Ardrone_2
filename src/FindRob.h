@@ -14,6 +14,11 @@
 #include <highgui.h>
 #include <cv.h>
 
+#define TestShowImg 1;//1-main switch for the following show many images for test,0-close the function
+#define ShowRobotT 1;//1-show robot threshold pic,0-close the function
+#define ShowGroundT 1;//1-show ground threshold pic,0-close the function
+#define ShowGroundCenterT 1;//1-show ground center threshold pic,0-close the function
+
 using namespace std;
 
 class FindRob  
@@ -27,9 +32,13 @@ public:
   //about robot
   CvPoint getRobCenter();//get the center of robot
   double getRobDir();//get robot direction(asin), forward is 0, left is -pai~0, right is 0~+pai
+  bool doesRobotExist();
 
-  //about ground
+  //about ground,about yellow
   int isGroundEdge();//does edge appear in the camera?0-no, 8-forward, 4-back, 2-left, 1-right, 10-forward left, 9-forward right, 6-back left, 5-back right
+  
+  //GroundCenter,about blue
+  bool doesGroundCenterExist();
   CvPoint getGroundCenter();//return blue point center,if not exist, return (-100,-100)
 
 private:
@@ -41,11 +50,15 @@ private:
   CvPoint RobotBlackPoint;
   CvPoint GroundCenter;
   int isEdge;
+  bool FlagRobotExist;
+  bool FlagGroundCenterExist; 
 
   void SearchRobot(IplImage *src);
-  int FlagSearRob;
+  bool FlagSearRob;
   void AnalyzeGround(IplImage *src);
-  int FlagAnaGrou;
+  bool FlagAnaGrou;
+  void FindGroundCenter(IplImage *src);
+  bool FlagFindGrCenter;
 };
 
 #endif // !defined(AFX_FINDROB_H__72A23126_B93C_4525_9F91_B5C7F379DC83__INCLUDED_)

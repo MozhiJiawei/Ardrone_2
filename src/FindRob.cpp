@@ -37,14 +37,18 @@ void FindRob::ReInit(IplImage *img)
   GroundCenter = cvPoint(-100, -100);
 
   isEdge = 0;
+  FlagRobotExist = 0;
+  FlagGroundCenterExist = 0;
   FlagSearRob = 0;
   FlagAnaGrou = 0;
+  FlagFindGrCenter = 0;
 
   //threshold,a-blue,b-green,c-red,red and white circle is white,
   int a = 0, b = 0, c = 0;
   unsigned char* p = (unsigned char*)(img->imageData);
   unsigned char* q = (unsigned char*)(ImgForRob->imageData);
   unsigned char* r = (unsigned char*)(ImgForYellow->imageData);
+  unsigned char* s = (unsigned char*)(ImgForBlue->imageData);
   int i = 0, j = 0;
   for(i=0;i<img->width;++i)
   {
@@ -65,25 +69,36 @@ void FindRob::ReInit(IplImage *img)
           q[i*ImgForRob->nChannels+(j)*ImgForRob->widthStep]=0;
 
       if((c-a)>0 && (b-a)>0)//for yellow
-        {
-          if((a+b+c)<50)
-            r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=0;
-          else
-            r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=255;          
-        }
-        else
+      {
+        if((a+b+c)<50)
           r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=0;
+        else
+          r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=255;          
+      }
+      else
+        r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=0;
+
+      if(b<20 && c<20 && a>50)//for blue
+      {          
+        s[i*ImgForBlue->nChannels+(j)*ImgForBlue->widthStep]=255;          
+      }
+      else
+        s[i*ImgForBlue->nChannels+(j)*ImgForBlue->widthStep]=0;
     }
   }
-
 }
 
+//analyze red
 void FindRob::SearchRobot(IplImage *src)
 {  
   cvErode(src,src,NULL,1);
   cvDilate(src,src,NULL,4);
   cvErode(src,src,NULL,1);
-
+#if TestShowImg && ShowRobotT
+  cvNamedWindow("robot threshold",0);
+  cvShowImage("robot threshold", ImgForRob);
+  cvWaitKey(1);
+#endif
   //find contours
   CvMemStorage *storage = cvCreateMemStorage(0);
   CvSeq *contour = 0, *RobCont = 0, *tempcont = 0;
@@ -113,7 +128,9 @@ void FindRob::SearchRobot(IplImage *src)
     }
     tempcont = tempcont->h_next;
   }
- 
+  if(RobRadius > 30)//avoid misregconize small points as robot
+  {
+  FlagRobotExist = 1;
   RobotCenter = cvPointFrom32f(RobCenter);
   cvCircle (OriginImg, RobotCenter, cvRound(RobRadius-10), CV_RGB(225, 250, 225), 3, 8, 0);
   if(RobCont->v_next != NULL && RobRadius > 50)
@@ -142,15 +159,20 @@ void FindRob::SearchRobot(IplImage *src)
     }    
   }
   }
+  }
   FlagSearRob = 1;
   cvReleaseMemStorage( &storage );
 }
 
-//for yellow
+//analyze yellow
 void FindRob::AnalyzeGround(IplImage *src)
 {
   cvErode(src,src,NULL,1);
-
+#if TestShowImg && ShowGroundT
+  cvNamedWindow("ground yellow threshold",0);
+  cvShowImage("ground yellow threshold", ImgForYellow);
+  cvWaitKey(1);
+#endif
   CvMemStorage *storage = cvCreateMemStorage(0);
   CvSeq *contour = 0, *RobCont = 0, *tempcont = 0;
   int contours = 0;
@@ -194,6 +216,55 @@ void FindRob::AnalyzeGround(IplImage *src)
   cvReleaseMemStorage( &storage );
 }
 
+//analyze blue
+void FindRob::FindGroundCenter(IplImage *src)
+{
+  cvErode(src,src,NULL,2);
+#if TestShowImg && ShowGroundCenterT
+  cvNamedWindow("ground center blue threshold",0);
+  cvShowImage("ground center blue threshold", ImgForBlue);
+  cvWaitKey(1);
+#endif
+
+  //here reuse find robot contour
+  CvMemStorage *storage = cvCreateMemStorage(0);
+  CvSeq *contour = 0, *RobCont = 0, *tempcont = 0;
+  int contours = 0;
+  contours = cvFindContours( src, storage, &contour, sizeof(CvContour), CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+
+  if(contours > 0)
+  {
+    //choose largest circle as the ground center
+    tempcont = contour;
+    RobCont = contour;
+    //double face;
+    CvPoint2D32f RobCenter, tempCenter;
+    float RobRadius = 0, tempR = 0;
+    while(tempcont != NULL)
+    {
+      cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);
+      if(tempR > RobRadius)
+      {      
+        RobCenter = tempCenter;
+        RobRadius = tempR;
+        RobCont = tempcont;      
+      }
+      tempcont = tempcont->h_next;
+  
+      if(RobRadius > 30)//avoid misregconize small points as robot
+      {
+        FlagGroundCenterExist = 1;
+        GroundCenter = cvPointFrom32f(RobCenter);
+#if TestShowImg && ShowGroundCenterT
+  cvCircle (OriginImg, GroundCenter, cvRound(RobRadius-5), CV_RGB(25, 250, 25), 2, 8, 0);
+#endif
+      }
+    }
+  }
+  FlagFindGrCenter = 1;
+  cvReleaseMemStorage( &storage );
+}
+
 //for yellow
 int FindRob::isGroundEdge()
 {
@@ -206,10 +277,18 @@ int FindRob::isGroundEdge()
 //for blue
 CvPoint FindRob::getGroundCenter()
 {
-  if(FlagAnaGrou == 0)
-    AnalyzeGround(ImgForBlue);
+  if(FlagFindGrCenter == 0)
+    FindGroundCenter(ImgForBlue);
 
   return GroundCenter;
+}
+
+bool FindRob::doesGroundCenterExist()
+{
+  if(FlagFindGrCenter == 0)
+    FindGroundCenter(ImgForBlue);
+
+  return FlagGroundCenterExist;
 }
 
 //for robot
@@ -219,6 +298,14 @@ CvPoint FindRob::getRobCenter()
     SearchRobot(ImgForRob);
 
   return RobotCenter;
+}
+
+bool FindRob::doesRobotExist()
+{
+  if(FlagSearRob == 0)
+    SearchRobot(ImgForRob);
+
+  return FlagRobotExist;
 }
 
 double FindRob::getRobDir()
