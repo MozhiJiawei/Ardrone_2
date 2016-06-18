@@ -205,9 +205,6 @@ tf::StampedTransform ArdroneTf::get_transform(const char *frame1,
     ros::Duration(1.0).sleep();
   }
 
-  LogCurTime();
-  _log << "timestamped is " << tm << endl;
-
   return trans;
 }
 
@@ -244,43 +241,17 @@ void ArdroneTf::GetDiff(double &error_x, double &error_y, double &error_turn) {
   tf::StampedTransform ref_to_base;
   double yaw, yaw_ref, pitch, roll;
   double x_ref, y_ref;
-  x_ref = _num_distance[_cur_number][*_path_itr]._x;
-  y_ref = _num_distance[_cur_number][*_path_itr]._y;
-  if (abs(x_ref) < 0.00001 && abs(y_ref) < 0.0001) {
-    if (_cur_number < *_path_itr) {
-      for (int i = _cur_number; i < *_path_itr; i++) {
-        x_ref += _num_distance[i][i + 1]._x;
-        y_ref += _num_distance[i][i + 1]._y;
-      }
-    } else {
-      for (int i = *_path_itr; i < _cur_number; i++) {
-        x_ref -= _num_distance[i][i + 1]._x;
-        y_ref -= _num_distance[i][i + 1]._y;
-      }
-    }
-  }
+  x_ref = 0;
+  y_ref = 0;
+  //ref_to_base = get_transform("ardrone_base_link", "ref_pose");
   ref_to_base = get_transform("ref_pose", "ardrone_base_link");
-  error_x = -ref_to_base.getOrigin().x() - x_ref;
-  error_y = -ref_to_base.getOrigin().y() - y_ref;
+  error_x = ref_to_base.getOrigin().x();
+  error_y = ref_to_base.getOrigin().y();
 
   // Two ways to calculate error_turn
+  ref_to_base = get_transform("ref_pose", "ardrone_base_link");
   ref_to_base.getBasis().getEulerYPR(error_turn, pitch, roll);
   error_turn = -error_turn;
-
-  /*
-  this->get_transform("odom", "ardrone_base_link").getBasis().getEulerYPR(
-      yaw, pitch, roll);
-
-  _ref_trans.getBasis().getEulerYPR(yaw_ref, pitch, roll);
-  //mat.getEulerYPR(yaw_ref, pitch, roll);
-  error_turn = yaw - yaw_ref;
-  if (yaw_diff < -PI) {
-    error_turn += 2 * PI;
-  }
-  else if (yaw_diff > PI) {
-    error_turn -= 2 * PI;
-  }
-  */
 
   // Log Info
   LogCurTime();

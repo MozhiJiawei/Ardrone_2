@@ -39,7 +39,7 @@ set(SOURCE_FILES
         src/AffineTransform.cpp
         src/PredictNumber.cpp
         src/SearchNumber.cpp
-				src/ImgRecon.cpp
+        src/FindRob.cpp
 #blobtrack_sample.cpp
 #enteringblobdetection.cpp
         #src/ARVideo.cpp

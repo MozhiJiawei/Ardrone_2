@@ -2,7 +2,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "FindRob.h"
 
 //////////////////////////////////////////////////////////////////////
@@ -255,8 +255,9 @@ void FindRob::FindGroundCenter(IplImage *src)
       {
         FlagGroundCenterExist = 1;
         GroundCenter = cvPointFrom32f(RobCenter);
-#if TestShowImg && ShowGroundCenterT
-  cvCircle (OriginImg, GroundCenter, cvRound(RobRadius-5), CV_RGB(25, 250, 25), 2, 8, 0);
+
+#if TestShowImg && ShowGroundCenterT 
+        cvCircle (OriginImg, GroundCenter, cvRound(RobRadius-5), CV_RGB(25, 250, 25), 2, 8, 0);
 #endif
       }
     }
