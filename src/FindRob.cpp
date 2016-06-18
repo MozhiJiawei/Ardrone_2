@@ -35,6 +35,9 @@ void FindRob::ReInit(IplImage *img)
   RobotBlackPoint.x = 320;
   RobotBlackPoint.y = -100;
   GroundCenter = cvPoint(-100, -100);
+  minX=640, maxX=0, minY=360, maxY=0;
+  GroundRadius = 0;
+  RobotRadius = 0;
 
   isEdge = 0;
   FlagRobotExist = 0;
@@ -70,7 +73,7 @@ void FindRob::ReInit(IplImage *img)
 
       if((c-a)>0 && (b-a)>0)//for yellow
       {
-        if((a+b+c)<50)
+        if((a+b+c)>600)
           r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=0;
         else
           r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=255;          
@@ -97,6 +100,7 @@ void FindRob::SearchRobot(IplImage *src)
 #if TestShowImg && ShowRobotT
   cvNamedWindow("robot threshold",0);
   cvShowImage("robot threshold", ImgForRob);
+  cvMoveWindow("robot threshold", 600, 1);
   cvWaitKey(1);
 #endif
   //find contours
@@ -113,26 +117,28 @@ void FindRob::SearchRobot(IplImage *src)
   //double face;
   CvPoint2D32f RobCenter, tempCenter;
   float RobRadius = 0, tempR = 0;
+  int edge = isGroundEdge();
   while(tempcont != NULL)
   {
     cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);
+    //cout<<"radius of circle:"<<tempR<<endl;
     if(tempR > RobRadius)
     {
-      //face = 3.14159*tempR*tempR;
-      //if((face-fabs(cvContourArea(tempcont))) < 0.3*face)
-      //{
+      if(edge==0 || (edge!=0 && tempCenter.x>minX && tempCenter.x<maxX && tempCenter.y>minY && tempCenter.y<maxY))
+      {
         RobCenter = tempCenter;
         RobRadius = tempR;
         RobCont = tempcont;
-      //}
+      }
     }
     tempcont = tempcont->h_next;
   }
-  if(RobRadius > 30)//avoid misregconize small points as robot
+  if(RobRadius > 20)//avoid misregconize small points as robot
   {
   FlagRobotExist = 1;
   RobotCenter = cvPointFrom32f(RobCenter);
-  cvCircle (OriginImg, RobotCenter, cvRound(RobRadius-10), CV_RGB(225, 250, 225), 3, 8, 0);
+  RobotRadius = cvRound(RobRadius-5);
+  cvCircle (OriginImg, RobotCenter, RobotRadius, CV_RGB(225, 250, 225), 3, 8, 0);
   if(RobCont->v_next != NULL && RobRadius > 50)
   {
     CvPoint2D32f center1;
@@ -171,6 +177,7 @@ void FindRob::AnalyzeGround(IplImage *src)
 #if TestShowImg && ShowGroundT
   cvNamedWindow("ground yellow threshold",0);
   cvShowImage("ground yellow threshold", ImgForYellow);
+  cvMoveWindow("ground yellow threshold", 60, 350);
   cvWaitKey(1);
 #endif
   CvMemStorage *storage = cvCreateMemStorage(0);
@@ -180,11 +187,11 @@ void FindRob::AnalyzeGround(IplImage *src)
 
   //find min bounding rect
   CvRect recttemp;
-  int minX=640, maxX=0, minY=360, maxY=0, tempx=0, tempy=0;
+  int tempx=0, tempy=0;
   for(tempcont = contour; tempcont!=NULL; tempcont = tempcont->h_next)
   {
     recttemp = cvBoundingRect(tempcont, 0);
-    if (recttemp.width > 20 && recttemp.height > 20)  
+    if (recttemp.width > 20 || recttemp.height > 20)  
     {
       tempx = recttemp.x;
       if(tempx < minX)
@@ -202,7 +209,7 @@ void FindRob::AnalyzeGround(IplImage *src)
       if(tempy > maxY)
         maxY = tempy;      
     }
-  }
+  }cout<<"maxXminXmaxYminY:"<<maxX<<" "<<minX<<" "<<maxY<<" "<<minY<<endl;
   if(minX > 5)//left
     isEdge += 2;
   if(minY > 5)//forward
@@ -211,6 +218,18 @@ void FindRob::AnalyzeGround(IplImage *src)
     isEdge += 1;
   if(maxY < 355)//back
     isEdge += 4;
+
+  switch(isEdge)
+  {
+    case 1:{maxX -= 10;minX -= 300;}break;
+    case 2:{minX += 10;maxX += 300;}break;
+    case 4:{maxY -= 10;minY -= 300;}break;
+    case 8:{minY += 10;maxY += 300;}break;
+    case 9:{minY += 10;maxX -= 10;maxY += 300;minX -= 300;}break;
+    case 10:{minY += 10;minX += 10;maxY += 300;maxX += 300;}break;
+    case 5:{maxY -= 10;maxX -= 10;minY -= 300;minX -= 300;}break;
+    case 6:{maxY -= 10;minX += 10;minY -= 300;maxX += 300;}break;
+  }
 
   FlagAnaGrou = 1;
   cvReleaseMemStorage( &storage );
@@ -223,6 +242,7 @@ void FindRob::FindGroundCenter(IplImage *src)
 #if TestShowImg && ShowGroundCenterT
   cvNamedWindow("ground center blue threshold",0);
   cvShowImage("ground center blue threshold", ImgForBlue);
+  cvMoveWindow("ground center blue threshold", 60, 1);
   cvWaitKey(1);
 #endif
 
@@ -240,27 +260,30 @@ void FindRob::FindGroundCenter(IplImage *src)
     //double face;
     CvPoint2D32f RobCenter, tempCenter;
     float RobRadius = 0, tempR = 0;
+    int edge = isGroundEdge();
     while(tempcont != NULL)
     {
       cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);
       if(tempR > RobRadius)
-      {      
+      {         
+        if(edge==0 || (edge!=0 && RobCenter.x>minX && RobCenter.x<maxX && RobCenter.y>minY && RobCenter.y<maxY))
+        {
         RobCenter = tempCenter;
         RobRadius = tempR;
-        RobCont = tempcont;      
+        RobCont = tempcont;  
+        }        
       }
       tempcont = tempcont->h_next;
-  
+    }
       if(RobRadius > 30)//avoid misregconize small points as robot
       {
         FlagGroundCenterExist = 1;
         GroundCenter = cvPointFrom32f(RobCenter);
-
-#if TestShowImg && ShowGroundCenterT 
-        cvCircle (OriginImg, GroundCenter, cvRound(RobRadius-5), CV_RGB(25, 250, 25), 2, 8, 0);
+        GroundRadius = cvRound(RobRadius);
+#if TestShowImg && ShowGroundCenterT
+  cvCircle (OriginImg, GroundCenter, GroundRadius, CV_RGB(25, 250, 25), 2, 8, 0);
 #endif
-      }
-    }
+      }    
   }
   FlagFindGrCenter = 1;
   cvReleaseMemStorage( &storage );
@@ -284,6 +307,14 @@ CvPoint FindRob::getGroundCenter()
   return GroundCenter;
 }
 
+int FindRob::getGroundCenterRadius()
+{
+  if(FlagFindGrCenter == 0)
+    FindGroundCenter(ImgForBlue);
+
+  return GroundRadius;
+}
+
 bool FindRob::doesGroundCenterExist()
 {
   if(FlagFindGrCenter == 0)
@@ -299,6 +330,14 @@ CvPoint FindRob::getRobCenter()
     SearchRobot(ImgForRob);
 
   return RobotCenter;
+}
+
+int FindRob::getRobRadius()
+{
+  if(FlagSearRob == 0)
+    SearchRobot(ImgForRob);
+
+  return RobotRadius;
 }
 
 bool FindRob::doesRobotExist()
