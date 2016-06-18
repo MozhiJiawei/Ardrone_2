@@ -31,6 +31,7 @@ public:
 
   //about robot
   CvPoint getRobCenter();//get the center of robot
+  int getRobRadius();//get the radius of robot
   double getRobDir();//get robot direction(asin), forward is 0, left is -pai~0, right is 0~+pai
   bool doesRobotExist();
 
@@ -40,6 +41,7 @@ public:
   //GroundCenter,about blue
   bool doesGroundCenterExist();
   CvPoint getGroundCenter();//return blue point center,if not exist, return (-100,-100)
+  int getGroundCenterRadius();//return blue point Radius
 
 private:
   IplImage *OriginImg,
@@ -47,11 +49,14 @@ private:
     *ImgForYellow,
     *ImgForBlue;
   CvPoint RobotCenter;
+  int RobotRadius;
   CvPoint RobotBlackPoint;
   CvPoint GroundCenter;
+  int GroundRadius;
   int isEdge;
   bool FlagRobotExist;
   bool FlagGroundCenterExist; 
+  int minX, maxX, minY, maxY;//to remember the area which is not outside edge 
 
   void SearchRobot(IplImage *src);
   bool FlagSearRob;
