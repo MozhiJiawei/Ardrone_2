@@ -111,6 +111,7 @@ void *Control_loop(void *param) {
   Mat imgmat;
   
   system("rosservice call /ardrone/setcamchannel 1");
+  //system("rosservice call /ardrone/flattrim");
   ///////////////////////// PID control parameters
   double centerx, centery;
   double errorx, errory, errorturn;
@@ -145,7 +146,7 @@ void *Control_loop(void *param) {
   ModeType cur_mode = STOP, next_mode = STOP;
   int frame_count = 0, lostframe = 0;
   ///////////////////////////////////////////////////////////
-  double robot_x, robot_y;
+  double robot_x = -1, robot_y = 0;
   double drone_x, drone_y;
   double targetx = 320, targety = 185;
   double takeoff_altitude = 1800;
@@ -154,7 +155,7 @@ void *Control_loop(void *param) {
   double takeoff_time;
   int pid_stable_count = 0;
 
-  double flying_scale;
+  double flying_scale = 300;
 
   double tf_errorx, tf_errory, tf_errorturn;
   cvNamedWindow("a", 1);
@@ -187,10 +188,10 @@ void *Control_loop(void *param) {
         if (find_rob.doesGroundCenterExist()) {
           centerx = find_rob.getGroundCenter().x;
           centery = find_rob.getGroundCenter().y;
-          errory = centery - targety;
-          errorx = centerx - targetx;
           CLIP3(10.0, centerx, 590.0);
           CLIP3(10.0, centery, 350.0);
+          errory = centery - targety;
+          errorx = centerx - targetx;
           forwardb = pid.PIDXY(errory, 1500);
           leftr = pid.PIDXY(errorx, 1500, false);
           upd = pid.PIDZ(takeoff_altitude, 50);
@@ -226,7 +227,7 @@ void *Control_loop(void *param) {
         forwardb = pid.PIDXY(drone_x * flying_scale, 500);
         leftr = pid.PIDXY(drone_y * flying_scale, 500);
         CLIP3(-0.1, leftr, 0.1);
-        CLIP3(-0.1, forwrdb, 0.1);
+        CLIP3(-0.1, forwardb, 0.1);
         upd = 0;
         turnleftr = 0;
         if (abs(drone_x) < 0.2 && abs(drone_y) < 0.2) {
@@ -247,7 +248,6 @@ void *Control_loop(void *param) {
         CLIP3(-0.1, forwardb, 0.1);
         upd = 0;
         turnleftr = 0;
-
         if (find_rob.doesRobotExist()) {
           pid_stable_count++;
           if (pid_stable_count >= 3) {
@@ -273,44 +273,23 @@ void *Control_loop(void *param) {
           centery = find_rob.getRobCenter().y;
           CLIP3(10.0, centerx, 590.0);
           CLIP3(10.0, centery, 350.0);
-          lasterrorx = errorx;
-          lasterrory = errory;
-          errorx = centerx - targetx;
           errory = centery - targety;
-          targetvx = -vk * errory - vk * (errory - lasterrory);
-          targetvy = -vk * errorx - vk * (errorx - lasterrorx);
-          if (errory > 80 || errory < -80) {
-            targetvx += -vk * errory + 80 * vk;
-          }
-          if (errorx > 80 || errorx < -80) {
-            targetvy += -vk * errorx + 80 * vk;
-          }
-          CLIP3(-1500.0, targetvx, 1500.0);
-          CLIP3(-1500.0, targetvy, 1500.0);
-          forwardb = pidVX.getOutput(targetvx - thread.navdata.vx, 0.5);
-          leftr = pidVY.getOutput(targetvy - thread.navdata.vy, 0.5);
-          leftr /= 15000;
-          forwardb /= 15000;
-
-          if (thread.navdata.altd < follow_altitude) {
-            upd = 0.002 * (follow_altitude - thread.navdata.altd);
-          }
-          else if (thread.navdata.altd > follow_altitude + 50) {
-            upd = 0.002 * (follow_altitude + 50 - thread.navdata.altd);
-          }
-          else {
-            upd = 0;
-          }
+          errorx = centerx - targetx;
+          forwardb = pid.PIDXY(errory, 1500);
+          leftr = pid.PIDXY(errorx, 1500, false);
+          upd = pid.PIDZ(follow_altitude, 100);
           CLIP3(-0.1, leftr, 0.1);
           CLIP3(-0.1, forwardb, 0.1);
-          upd = 0;
+          CLIP3(-0.2, upd, 0.2);
           turnleftr = 0;
 
-          if (abs(errorx) < 30 && abs(errory) < 30 && upd == 0) {
+          if (abs(errorx) < 50 && abs(errory) < 50) {
             //errorturn = find_rob.getRobDir();
             //turnleftr = errorturn * 10;
             //CLIP3(-0.15, turnleftr, 0.15);
-            if (abs(errorturn) < 0.1) {
+            forwardb = 0;
+            leftr = 0;
+            if (abs(errorturn) < 0.1 && upd == 0) {
               turnleftr = 0;
               if (pid_stable_count >= 4) {
                 log << "Finish Flowing Robot" << std::endl;
@@ -328,9 +307,11 @@ void *Control_loop(void *param) {
           }
           else {
             log << "PID to CENTER" << std::endl;
-            log << "errorx = " << errorx << "errory = " << errory << std::endl
-                << "forward = " << forwardb << "leftr = " << leftr << std::endl;
+            log << "errorx = " << errorx << " errory = " << errory << std::endl
+                << "forward = " << forwardb << " leftr = " << leftr << std::endl;
 
+            log << "altd = " << thread.navdata.altd << std::endl;
+            cout << thread.navdata.altd << std::endl;
           }
         }
         break;

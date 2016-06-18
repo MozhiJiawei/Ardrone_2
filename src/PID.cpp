@@ -13,15 +13,15 @@
       _n = _n2;                                                                \
   }
 
-void PID::PIDXY(double error, double v_max, bool is_X) {
+double PID::PIDXY(double error, double v_max, bool is_X) {
   double targetv, control;
   double kp = 2.0;
   if (is_X) {
-    targetv = (-2 * error - lasterrorx_) * kp;
+    targetv = (-2 * error + lasterrorx_) * kp;
     lasterrorx_ = error;
   }
   else {
-    targetv = (-2 * error - lasterrory_) * kp;
+    targetv = (-2 * error + lasterrory_) * kp;
     lasterrory_ = error;
   }
 
