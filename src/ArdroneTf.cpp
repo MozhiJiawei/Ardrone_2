@@ -243,8 +243,8 @@ void ArdroneTf::GetDiff(double &error_x, double &error_y, double &error_turn) {
   double x_ref, y_ref;
   x_ref = 0;
   y_ref = 0;
-  //ref_to_base = get_transform("ardrone_base_link", "ref_pose");
-  ref_to_base = get_transform("ref_pose", "ardrone_base_link");
+  ref_to_base = get_transform("ardrone_base_link", "ref_pose");
+  //ref_to_base = get_transform("ref_pose", "ardrone_base_link");
   error_x = ref_to_base.getOrigin().x();
   error_y = ref_to_base.getOrigin().y();
 
