@@ -2,7 +2,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-//#include "stdafx.h"
+#include "stdafx.h"
 #include "FindRob.h"
 
 //////////////////////////////////////////////////////////////////////
@@ -73,7 +73,7 @@ void FindRob::ReInit(IplImage *img)
 
       if((c-a)>0 && (b-a)>0)//for yellow
       {
-        if((a+b+c)>600)
+        if((a+b+c)<50)
           r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=0;
         else
           r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=255;          
@@ -209,7 +209,7 @@ void FindRob::AnalyzeGround(IplImage *src)
       if(tempy > maxY)
         maxY = tempy;      
     }
-  }cout<<"maxXminXmaxYminY:"<<maxX<<" "<<minX<<" "<<maxY<<" "<<minY<<endl;
+  }//cout<<"maxXminXmaxYminY:"<<maxX<<" "<<minX<<" "<<maxY<<" "<<minY<<endl;
   if(minX > 5)//left
     isEdge += 2;
   if(minY > 5)//forward
