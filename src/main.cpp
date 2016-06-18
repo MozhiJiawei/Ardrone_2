@@ -155,10 +155,11 @@ void *Control_loop(void *param) {
   int frame_count = 0, lostframe = 0;
   ///////////////////////////////////////////////////////////
   double takeoff_time;
-  double target_altitude = 2000;
+  double target_altitude = 1800;
+  double follow_altitude = 1200;
   int pid_stable_count = 0;
   double tf_errorx, tf_errory, tf_errorturn;
-  cvNamedWindow("main_window", 1);
+  cvNamedWindow("a", 1);
   while (ros::ok()) {
     usleep(1000);
     if (videoreader.newframe) {
@@ -170,6 +171,9 @@ void *Control_loop(void *param) {
       videoreader.getImage(imgmat, img_time);
       *imgsrc = imgmat;
       find_rob.ReInit(imgsrc);
+      find_rob.doesRobotExist();
+      find_rob.isGroundEdge();
+      find_rob.doesGroundCenterExist();
       switch (cur_mode) {
       case START:
         LogCurTime(log);
@@ -201,12 +205,13 @@ void *Control_loop(void *param) {
           if (pid_stable_count >= 4) {
             log << "TakeOff Complete!!! Folowing Robot" << std::endl;
             drone_tf.SetRefPose(0, img_time);
-            next_mode = FOLLOWROBOT;
+            //next_mode = FOLLOWROBOT;
+            next_mode = SEARCHING;
           }
         }
         else {
           pid_stable_count = 0;
-          log << "TAKEOFF!! altitude = " << thread.navdataCb.altd << std::endl;
+          log << "TAKEOFF!! altitude = " << thread.navdata.altd << std::endl;
         }
         break;
       case TOCENTER:
@@ -217,11 +222,11 @@ void *Control_loop(void *param) {
         LogCurTime(log);
         drone_tf.GetDiff(tf_errorx, tf_errory, tf_errorturn);
         log << "tf_errorx = " << tf_errorx << "tf_errory = " << tf_errory 
-            << "tf_errorturn = " << tf_errorgturn << std::endl;
+            << "tf_errorturn = " << tf_errorturn << std::endl;
 
         if (find_rob.doesRobotExist()) {
-          centerx = find_rob.getRobCenter.x;
-          centery = find_rob.getRobCenter.y;
+          centerx = find_rob.getRobCenter().x;
+          centery = find_rob.getRobCenter().y;
           CLIP3(10.0, centerx, 590.0);
           CLIP3(10.0, centery, 350.0);
           lasterrorx = errorx;
@@ -243,12 +248,21 @@ void *Control_loop(void *param) {
           leftr /= 15000;
           forwardb /= 15000;
 
+          if (thread.navdata.altd < follow_altitude) {
+            upd = 0.002 * (follow_altitude - thread.navdata.altd);
+          }
+          else if (thread.navdata.altd > target_altitude + 50) {
+            upd = 0.002 * (follow_altitude + 50 - thread.navdata.altd);
+          }
+          else {
+            upd = 0;
+          }
           CLIP3(-0.1, leftr, 0.1);
           CLIP3(-0.1, forwardb, 0.1);
           upd = 0;
           turnleftr = 0;
 
-          if (abs(errorx) < 30 && abs(errory) < 30) {
+          if (abs(errorx) < 30 && abs(errory) < 30 && upd == 0) {
             errorturn = find_rob.getRobDir();
             turnleftr = errorturn * 10;
             CLIP3(-0.15, turnleftr, 0.15);
@@ -275,6 +289,15 @@ void *Control_loop(void *param) {
         }
         break;
       case SEARCHING:
+        LogCurTime(log);
+        drone_tf.GetDiff(tf_errorx, tf_errory, tf_errorturn);
+        log << "tf_errorx = " << tf_errorx << "tf_errory = " << tf_errory 
+            << "tf_errorturn = " << tf_errorturn << std::endl;
+
+        forwardb = 0.05;
+        leftr = 0;
+        upd = 0;
+        turnleftr = 0;
         break;
       default:
         break;
