@@ -16,7 +16,7 @@
 
 using namespace std;
 
-enum ModeType { TAKEOFF, LAND, STOP, FLYING, SEARCHING, START, MANUL };
+enum ModeType { TAKEOFF, TOCENTER, TOROBOT, FOLLOWROBOT, SEARCHING, START, MANUL };
 
 class CMDReciever {
 public:

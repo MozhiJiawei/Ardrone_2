@@ -76,8 +76,9 @@ void CMDReciever::RunNextMode(ModeType mode, double y_left, double x_forward,
 
   switch (mode) {
   case TAKEOFF:
-  case LAND:
-  case FLYING:
+  case TOCENTER:
+  case TOROBOT:
+  case FOLLOWROBOT:
   case SEARCHING:
     _drone.move(y_left, x_forward, z_up, angle_turn);
     break;
