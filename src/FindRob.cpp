@@ -230,7 +230,7 @@ void FindRob::AnalyzeGround(IplImage *src)
     case 5:{maxY -= 10;maxX -= 10;minY -= 300;minX -= 300;}break;
     case 6:{maxY -= 10;minX += 10;minY -= 300;maxX += 300;}break;
   }
-
+//cout<<"after-maxXminXmaxYminY:"<<maxX<<" "<<minX<<" "<<maxY<<" "<<minY<<endl;
   FlagAnaGrou = 1;
   cvReleaseMemStorage( &storage );
 }
@@ -265,8 +265,8 @@ void FindRob::FindGroundCenter(IplImage *src)
     {
       cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);
       if(tempR > RobRadius)
-      {         
-        if(edge==0 || (edge!=0 && RobCenter.x>minX && RobCenter.x<maxX && RobCenter.y>minY && RobCenter.y<maxY))
+      { 
+        if(edge==0 || (edge!=0 && tempCenter.x>minX && tempCenter.x<maxX && tempCenter.y>minY && tempCenter.y<maxY))
         {
         RobCenter = tempCenter;
         RobRadius = tempR;
