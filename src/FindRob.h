@@ -53,7 +53,8 @@ private:
   CvPoint RobotBlackPoint;
   CvPoint GroundCenter;
   int GroundRadius;
-  int isEdge;
+  int isEdge,//from yellow
+    isEdgeConfirm;//combine yellow and blue
   bool FlagRobotExist;
   bool FlagGroundCenterExist; 
   int minX, maxX, minY, maxY;//to remember the area which is not outside edge 

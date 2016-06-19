@@ -40,6 +40,7 @@ void FindRob::ReInit(IplImage *img)
   RobotRadius = 0;
 
   isEdge = 0;
+  isEdgeConfirm = 0;
   FlagRobotExist = 0;
   FlagGroundCenterExist = 0;
   FlagSearRob = 0;
@@ -94,6 +95,8 @@ void FindRob::ReInit(IplImage *img)
 //analyze red
 void FindRob::SearchRobot(IplImage *src)
 {  
+  if(FlagSearRob != 0) return;
+
   cvErode(src,src,NULL,1);
   cvDilate(src,src,NULL,4);
   cvErode(src,src,NULL,1);
@@ -173,6 +176,8 @@ void FindRob::SearchRobot(IplImage *src)
 //analyze yellow
 void FindRob::AnalyzeGround(IplImage *src)
 {
+  if(FlagAnaGrou != 0) return;
+
   cvErode(src,src,NULL,1);
 #if TestShowImg && ShowGroundT
   cvNamedWindow("ground yellow threshold",0);
@@ -238,6 +243,10 @@ void FindRob::AnalyzeGround(IplImage *src)
 //analyze blue
 void FindRob::FindGroundCenter(IplImage *src)
 {
+  if(FlagFindGrCenter != 0) return;
+
+  if(FlagAnaGrou == 0)
+    AnalyzeGround(ImgForYellow);
   cvErode(src,src,NULL,2);
 #if TestShowImg && ShowGroundCenterT
   cvNamedWindow("ground center blue threshold",0);
@@ -260,7 +269,7 @@ void FindRob::FindGroundCenter(IplImage *src)
     //double face;
     CvPoint2D32f RobCenter, tempCenter;
     float RobRadius = 0, tempR = 0;
-    int edge = isGroundEdge();
+    int edge = isEdge;//isGroundEdge(),mistake here
     while(tempcont != NULL)
     {
       cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);
@@ -272,6 +281,26 @@ void FindRob::FindGroundCenter(IplImage *src)
         RobRadius = tempR;
         RobCont = tempcont;  
         }        
+      }
+
+      if(tempR > 20)//judge whether the blue is edge
+      {
+        if((8 & isEdge) && tempCenter.y<(minY+100))
+        {
+          isEdgeConfirm += 8;
+        }
+        if((4 & isEdge) && tempCenter.y>(maxY-100))
+        {
+          isEdgeConfirm += 4;
+        }
+        if((2 & isEdge) && tempCenter.x<(minX+100))
+        {
+          isEdgeConfirm += 2;
+        }
+        if((1 & isEdge) && tempCenter.x>(maxX-100))
+        {
+          isEdgeConfirm += 1;
+        }
       }
       tempcont = tempcont->h_next;
     }
@@ -294,13 +323,17 @@ int FindRob::isGroundEdge()
 {
   if(FlagAnaGrou == 0)
     AnalyzeGround(ImgForYellow);
+  if(FlagFindGrCenter == 0)
+    FindGroundCenter(ImgForBlue);
 
-  return isEdge;
+  return isEdgeConfirm;
 }
 
 //for blue
 CvPoint FindRob::getGroundCenter()
 {
+  if(FlagAnaGrou == 0)
+    AnalyzeGround(ImgForYellow);
   if(FlagFindGrCenter == 0)
     FindGroundCenter(ImgForBlue);
 
