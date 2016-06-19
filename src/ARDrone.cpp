@@ -357,8 +357,8 @@ bool ARDrone::move(float lr, float fb, float ud, float w) {
   twist_msg.linear.x=fb;
   twist_msg.linear.y=lr;
   twist_msg.linear.z=ud;
-  twist_msg.angular.x=0.0;
-  twist_msg.angular.y=0.0;
+  twist_msg.angular.x=1.0;
+  twist_msg.angular.y=1.0;
   twist_msg.angular.z= w;
   pub_twist.publish(twist_msg);
   //ROS_INFO("Moving");

@@ -126,7 +126,7 @@ void *Control_loop(void *param) {
   double scale = 3;
   static double vkp = 5, vkd = 20, vki = 0;
   ///////////////////////////////////PID调节的初始量///////////////////////////////
-  PID pid(thread);
+  PID pid(thread, find_rob);
   //////////////////////////////////////////////////////////
   ofstream log;
   char filename[50];
@@ -146,10 +146,10 @@ void *Control_loop(void *param) {
   ModeType cur_mode = STOP, next_mode = STOP;
   int frame_count = 0, lostframe = 0;
   ///////////////////////////////////////////////////////////
-  double robot_x = -1, robot_y = 0;
+  double robot_x = 1, robot_y = 0;
   double drone_x, drone_y;
   double targetx = 320, targety = 185;
-  double takeoff_altitude = 1800;
+  double takeoff_altitude = 1200;
   double follow_altitude = 1200;
 
   double takeoff_time;
@@ -159,6 +159,7 @@ void *Control_loop(void *param) {
 
   double tf_errorx, tf_errory, tf_errorturn;
   cvNamedWindow("a", 1);
+  cvMoveWindow("a", 600, 350);
   while (ros::ok()) {
     usleep(1000);
     if (videoreader.newframe) {
@@ -275,9 +276,9 @@ void *Control_loop(void *param) {
           CLIP3(10.0, centery, 350.0);
           errory = centery - targety;
           errorx = centerx - targetx;
-          forwardb = pid.PIDXY(errory, 1500);
-          leftr = pid.PIDXY(errorx, 1500, false);
-          upd = pid.PIDZ(follow_altitude, 100);
+          forwardb = pid.PIDXY(errory, 1000);
+          leftr = pid.PIDXY(errorx, 1000, false);
+          upd = pid.PIDZ(90, 10, false);
           CLIP3(-0.1, leftr, 0.1);
           CLIP3(-0.1, forwardb, 0.1);
           CLIP3(-0.2, upd, 0.2);
@@ -311,8 +312,12 @@ void *Control_loop(void *param) {
                 << "forward = " << forwardb << " leftr = " << leftr << std::endl;
 
             log << "altd = " << thread.navdata.altd << std::endl;
-            cout << thread.navdata.altd << std::endl;
+            log << "RobRadius = " << find_rob.getRobRadius() << std::endl;
+            log << "upd = " << upd << std::endl;
           }
+        } else {
+          upd = 0;
+          // TOROBOT.
         }
         break;
       case SEARCHING:

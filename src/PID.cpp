@@ -41,16 +41,22 @@ double PID::PIDXY(double error, double v_max, bool is_X) {
 }
 
 
-double PID::PIDZ(double altitude, double tolerance) {
-  double upd;
-  double kp = 0.002;
-  if (thread_.navdata.altd < altitude) {
-    upd = kp * (altitude - thread_.navdata.altd);
+double PID::PIDZ(double reference, double tolerance, bool is_altd) {
+  double upd, control_stuff;
+  double kp;
+  if(is_altd) {
+    control_stuff = thread_.navdata.altd; 
+    kp = 0.002;
+  } else {
+    control_stuff = find_rob_.getRobRadius();
+    kp = -0.005;
   }
-  else if (thread_.navdata.altd > altitude + tolerance) {
-    upd = kp * (altitude + tolerance - thread_.navdata.altd);
-  }
-  else {
+
+  if (control_stuff < reference) {
+    upd = kp * (reference - control_stuff);
+  } else if (control_stuff > reference + tolerance) {
+    upd = kp * (reference + tolerance - control_stuff);
+  } else {
     upd = 0;
   }
   return upd;
@@ -60,3 +66,4 @@ void PID::PIDReset() {
   lasterrorx_ = 0;
   lasterrory_ = 0;
 }
+
