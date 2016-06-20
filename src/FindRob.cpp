@@ -143,13 +143,25 @@ void FindRob::SearchRobot(IplImage *src)
   RobotRadius = cvRound(RobRadius-5);
   cvCircle (OriginImg, RobotCenter, RobotRadius, CV_RGB(225, 250, 225), 3, 8, 0);
   if(RobCont->v_next != NULL && RobRadius > 50)
-  {
+  {    
     CvPoint2D32f center1;
-    float r1;
-    cvMinEnclosingCircle( RobCont->v_next, &center1, &r1);    
+    float r1 = 0;
+    for(tempcont = RobCont->v_next; tempcont !=NULL; tempcont = tempcont->h_next)//find largest circle
+    {    
+      cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);    
+      if(tempR > r1)
+      {
+        center1 = tempCenter;
+        r1 = tempR;
+      }
     //cvCircle (img, cvPoint(cvRound(center1.x), cvRound(center1.y)), cvRound(r1), CV_RGB(0, 255, 127), 3, 8, 0);
-
-    if(RobCont->v_next->h_next != NULL)
+    }
+    if((r1 > (RobRadius/5)) && (sqrt( (center1.x-RobCenter.x)*(center1.x-RobCenter.x) + (center1.y-RobCenter.y)*(center1.y-RobCenter.y) ) > (RobRadius/4)))//judge whether is side black circle
+    {
+      RobotBlackPoint = cvPointFrom32f(center1);
+      cvCircle (OriginImg, RobotBlackPoint, cvRound(r1), CV_RGB(25, 200, 255), 3, 8, 0);
+    }
+    /*if(RobCont->v_next->h_next != NULL)
     {
       CvPoint2D32f center2;
       float r2;
@@ -165,7 +177,7 @@ void FindRob::SearchRobot(IplImage *src)
         r1 = r2;
       }
       cvCircle (OriginImg, RobotBlackPoint, cvRound(r1), CV_RGB(25, 200, 255), 3, 8, 0);
-    }    
+    }*/    
   }
   }
   }
