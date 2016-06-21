@@ -11,7 +11,6 @@ int main(int argc, char *argv[])
 
   cv::VideoCapture cap(1);
   cv::namedWindow("Video", 1);
-  CV_ASSERT(cap.isOpened);
   cv::Mat frame;
   while (1)
   {
@@ -19,6 +18,7 @@ int main(int argc, char *argv[])
     //if(!pFrame)break;
     //cvShowImage("Video",pFrame);
     cap >> frame;
+    cv::imshow("Video", frame);
     char c = cv::waitKey(3);
     if (c == 27)break;
   }
