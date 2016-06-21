@@ -29,7 +29,7 @@ private:
   public:
     RobotPosition(int x, int y): x_(x), y_(y) {}
     int x_;
-    int y_
+    int y_;
   };
   std::list<RobotPosition> position_buffer_;
   cv::Mat cur_img_;

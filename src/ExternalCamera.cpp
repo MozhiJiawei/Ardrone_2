@@ -9,7 +9,7 @@
 ExternalCamera::ExternalCamera() {
   running_ = false;
   toQuit_ = false;
-  threadID = 0;
+  threadID_ = 0;
   pthread_mutex_init(&mutex_, 0);
   Start();
 }
@@ -33,13 +33,12 @@ void ExternalCamera::Start() {
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-  pthread_create(&_threadID, &attr, ThreadProc, this);
+  pthread_create(&threadID_, &attr, ThreadProc, this);
 }
 
 void ExternalCamera::Loop() {
   cv::VideoCapture cap(1);
   cv::namedWindow("Video", 1);
-  CV_ASSERT(cap.isOpened());
   cv::Mat frame;
   while (!toQuit_) {
     cap >> frame;
