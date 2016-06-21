@@ -1,5 +1,18 @@
+/*
+ * DroneThread.h
+ *
+ *  Created on: June 21, 2016
+ *      Author: ljw
+ */
 #include "ExternalCamera.h"
 
+ExternalCamera::ExternalCamera() {
+  running_ = false;
+  toQuit_ = false;
+  threadID = 0;
+  pthread_mutex_init(&mutex_, 0);
+  Start();
+}
 bool ExternalCamera::isRobotExists() {
   return false;
 }
@@ -26,11 +39,12 @@ void ExternalCamera::Start() {
 void ExternalCamera::Loop() {
   cv::VideoCapture cap(1);
   cv::namedWindow("Video", 1);
-  CV_ASSERT(cap.isOpened);
+  CV_ASSERT(cap.isOpened());
   cv::Mat frame;
   while (!toQuit_) {
     cap >> frame;
     cv::imshow("Video", frame);
+    char c = cv::waitKey(3);
   }
 
 }

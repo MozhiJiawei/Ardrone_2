@@ -41,6 +41,7 @@ set(SOURCE_FILES
   src/SearchNumber.cpp
   src/FindRob.cpp
   src/PID.cpp
+  src/ExternalCamera.cpp
   #blobtrack_sample.cpp
   #enteringblobdetection.cpp
   #src/ARVideo.cpp

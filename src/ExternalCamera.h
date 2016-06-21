@@ -1,4 +1,3 @@
-
 /*
  * DroneThread.h
  *
@@ -15,12 +14,7 @@
 
 class ExternalCamera {
 public:
-  ExternalCamera() {
-    running_ = false;
-    toQuit_ = false;
-    threadID = 0;
-    pthread_mutex_init(&mutex_, 0);
-  }
+  ExternalCamera();
   ~ExternalCamera() {
     End();
   }

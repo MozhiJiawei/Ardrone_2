@@ -33,6 +33,7 @@
 #include "VideoRecorder.h"
 #include "SearchNumber.h"
 #include "PID.h"
+#include "ExternalCamera.h"
 
 #include "time.h"
 #include <opencv2/opencv.hpp>
@@ -104,6 +105,7 @@ void *Control_loop(void *param) {
   thread.showVideo = true;
   ros::Rate loop_rate(50);
   ////////////////////////////////
+  ExternalCamera ex_cam;
   FindRob find_rob(NULL);
   IplImage *imgsrc;
   CvSize imgSize = {640, 360};
