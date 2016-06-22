@@ -38,6 +38,7 @@ void FindRob::ReInit(IplImage *img)
   minX=640, maxX=0, minY=360, maxY=0;
   GroundRadius = 0;
   RobotRadius = 0;
+  GroundDir = 0;
 
   isEdge = 0;
   isEdgeConfirm = 0;
@@ -182,6 +183,7 @@ void FindRob::SearchRobot(IplImage *src)
   }
   }
   FlagSearRob = 1;
+  if(contour!=NULL) cvClearSeq(contour);
   cvReleaseMemStorage( &storage );
 }
 
@@ -197,14 +199,16 @@ void FindRob::AnalyzeGround(IplImage *src)
   cvMoveWindow("ground yellow threshold", 60, 350);
   cvWaitKey(1);
 #endif
-  CvMemStorage *storage = cvCreateMemStorage(0);
+  CvMemStorage *storage = cvCreateMemStorage(0), *storage1 = cvCreateMemStorage(0);
   CvSeq *contour = 0, *RobCont = 0, *tempcont = 0;
   int contours = 0;
   contours = cvFindContours( src, storage, &contour, sizeof(CvContour), CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
 
-  //find min bounding rect
+  //find min bounding rect, and find maxcontour
   CvRect recttemp;
   int tempx=0, tempy=0;
+  int maxArea = 0, tempArea = 0;
+  CvSeq *maxcont = 0, *cont = 0;
   for(tempcont = contour; tempcont!=NULL; tempcont = tempcont->h_next)
   {
     recttemp = cvBoundingRect(tempcont, 0);
@@ -225,6 +229,14 @@ void FindRob::AnalyzeGround(IplImage *src)
       tempy = recttemp.y + recttemp.height;
       if(tempy > maxY)
         maxY = tempy;      
+    }
+
+    //find maxcont
+    tempArea = fabs(cvContourArea(tempcont));
+    if(tempArea > maxArea)
+    {
+      maxcont = tempcont;
+      maxArea = tempArea;
     }
   }//cout<<"maxXminXmaxYminY:"<<maxX<<" "<<minX<<" "<<maxY<<" "<<minY<<endl;
   if(minX > 5)//left
@@ -247,9 +259,65 @@ void FindRob::AnalyzeGround(IplImage *src)
     case 5:{maxY -= 10;maxX -= 10;minY -= 300;minX -= 300;}break;
     case 6:{maxY -= 10;minX += 10;minY -= 300;maxX += 300;}break;
   }
+//try to confirm the ground angle
+  if(maxArea > 1000)
+  {
+    //ni he zhi xian
+    cont = cvApproxPoly(maxcont, sizeof(CvContour), storage1, CV_POLY_APPROX_DP, cvContourPerimeter(maxcont)*0.005, 0);
+    cvDrawContours(OriginImg, cont, CV_RGB(225, 220, 25), CV_RGB(25, 20, 255), 0, 2);
+    
+    bool flagpredis = 0, flagnextdis = 0;
+    for(int i=0; i<cont->total; ++i)
+    {      
+      CvPoint *pt0 = (CvPoint*)cvGetSeqElem( cont, i-1 ),
+        *pt1 = (CvPoint*)cvGetSeqElem( cont, i ),
+        *pt2 = (CvPoint*)cvGetSeqElem( cont, i-2 );
+      if(ptdistance(pt0, pt1) > 60 && ((pt0->x >10 && pt0->x <630 && pt0->y >10 && pt0->y <350) || (pt1->x >10 && pt1->x <630 && pt1->y >10 && pt1->y <350))) 
+        flagnextdis = 1;
+
+      if(flagpredis && flagnextdis)
+      {
+        if(fabs(angle(pt1, pt2, pt0)) < 0.17)//is 90 degree(+-10)
+        {          
+          cvCircle (OriginImg, *pt0, 10, CV_RGB(125, 100, 255), 2, 8, 0);
+          double dx1 = pt1->x - pt0->x, dy1 = pt1->y - pt0->y;
+          if(fabs(dx1) > fabs(dy1))
+          {
+            if(dx1 < 0)
+            {
+              GroundDir = asin(dy1 / sqrt(dx1*dx1 + dy1*dy1));
+            }
+            else
+            {
+              GroundDir = -asin(dy1 / sqrt(dx1*dx1 + dy1*dy1));
+            }
+          }
+          else
+          {
+            dx1 = pt2->x - pt0->x;
+            dy1 = pt2->y - pt0->y;
+            if(dx1 < 0)
+            {
+              GroundDir = asin(dy1 / sqrt(dx1*dx1 + dy1*dy1));
+            }
+            else
+            {
+              GroundDir = -asin(dy1 / sqrt(dx1*dx1 + dy1*dy1));
+            }
+          }          
+          break;
+        }
+      }
+      flagpredis = flagnextdis;
+      flagnextdis = 0;
+    }
+    if(cont!=NULL) cvClearSeq(cont);
+    cvReleaseMemStorage( &storage1 );
+  }
 //cout<<"after-maxXminXmaxYminY:"<<maxX<<" "<<minX<<" "<<maxY<<" "<<minY<<endl;
   FlagAnaGrou = 1;
-  cvReleaseMemStorage( &storage );
+  if(contour!=NULL) cvClearSeq(contour);  
+  cvReleaseMemStorage( &storage );  
 }
 
 //analyze blue
@@ -327,6 +395,7 @@ void FindRob::FindGroundCenter(IplImage *src)
       }    
   }
   FlagFindGrCenter = 1;
+  //cvClearSeq(contour);
   cvReleaseMemStorage( &storage );
 }
 
@@ -339,6 +408,14 @@ int FindRob::isGroundEdge()
     FindGroundCenter(ImgForBlue);
 
   return isEdgeConfirm;
+}
+
+double FindRob::getGroundDir()
+{
+  if(FlagAnaGrou == 0)
+    AnalyzeGround(ImgForYellow);
+
+  return GroundDir;
 }
 
 //for blue
@@ -410,4 +487,21 @@ double FindRob::getRobDir()
       ang = -3.1415 - ang;
   }
   return ang;
+}
+
+//
+double FindRob::angle( CvPoint* pt1, CvPoint* pt2, CvPoint* pt0 )
+{
+    double dx1 = pt1->x - pt0->x;
+    double dy1 = pt1->y - pt0->y;
+    double dx2 = pt2->x - pt0->x;
+    double dy2 = pt2->y - pt0->y;
+    return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2));// + 1e-10
+}
+
+double FindRob::ptdistance(CvPoint* pt1, CvPoint* pt2)
+{
+  double dx1 = pt1->x - pt2->x;
+  double dy1 = pt1->y - pt2->y;
+  return sqrt(dx1*dx1 + dy1*dy1);
 }
