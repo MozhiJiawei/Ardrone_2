@@ -22,6 +22,11 @@ void ExternalCamera::getRobotPosition(int & robot_x, int & robot_y) {
 }
 
 void ExternalCamera::setHomographyFromXML() {
+  cv::FileStorage fs("homography.xml", FileStorage::READ);
+  if (!fs.isOpened()) {
+    cout << "cannot open file" << std::endl;
+  }
+  fs["Homography"] >> homography_;
 }
 
 void ExternalCamera::FindHomography() {
@@ -48,7 +53,17 @@ void ExternalCamera::FindHomography() {
   }
   cv::findHomography(src_points, dst_points_, homography_);
   cv::FileStorage fs("homography.xml", FileStorage::WRITE);
-  fs >> "Homography" >> homography_;
+  fs << "Homography" << homography_;
+}
+
+bool ExternalCamera::getCurImage(cv::Mat &img) {
+  pthread_mutex_lock(&mutex_);
+  if (cur_img_.empty()) {
+    return false;
+  }
+  img = cur_img_.clone();
+  pthread_mutex_unlock(&mutex_);
+  return true;
 }
 
 void ExternalCamera::ImageProcess() {
@@ -88,9 +103,12 @@ void ExternalCamera::Loop() {
   cv::Mat frame;
   while (!toQuit_) {
     cap >> frame;
-    cur_img_ = frame;
+    pthread_mutex_lock(&mutex_);
+    cur_img_ = frame.clone();
+    pthread_mutex_unlock(&mutex_);
+    cv::imshow("Video", cur_img_);
+    cv::waitKey(3);
   }
-
 }
 
 void ExternalCamera::End() {

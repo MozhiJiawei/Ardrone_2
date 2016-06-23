@@ -21,6 +21,7 @@
 #include "IMURecorder.h"
 #include "VideoRecorder.h"
 #include "CMDReciever.h"
+#include "ExternalCamera.h"
 
 #include <deque>
 
@@ -43,6 +44,7 @@ class ROSThread {
     IMURecorder& imuRec;
     VideoRecorder& vidRec;
     CMDReciever& cmdRec;
+    ExternalCamera& ex_cam_;
 
     double tmIMU;
     ////////////////////////////////navdata
@@ -81,7 +83,9 @@ class ROSThread {
     ////////////////////////////////////
     void(*cbROSThread)(void);
   public:
-    ROSThread(IMURecorder& imu, VideoRecorder& vidRec, CMDReciever& cmd);
+    ROSThread(IMURecorder& imu, VideoRecorder& vidRec, CMDReciever& cmd,
+        ExternalCamera& ex_cam);
+
     virtual ~ROSThread();
     static void * threadProc(void*);
 

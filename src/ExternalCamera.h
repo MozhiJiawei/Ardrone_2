@@ -24,6 +24,7 @@ public:
   void getRobotPosition(int &robot_x, int &robot_y);
   void setHomographyFromXML();
   void FindHomography();
+  bool getCurImage(cv::Mat &img);
 
 private:
   struct RobotPosition {

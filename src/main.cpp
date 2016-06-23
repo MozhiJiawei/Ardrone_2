@@ -100,12 +100,12 @@ void *Control_loop(void *param) {
   VideoRecorder videoreader("/home/mozhi/Record/video_ts.txt",
                             "/home/mozhi/Record/video.avi");
 
+  ExternalCamera ex_cam;
   double img_time;
-  ROSThread thread(imureader, videoreader, cmdreader);
+  ROSThread thread(imureader, videoreader, cmdreader, ex_cam);
   thread.showVideo = true;
   ros::Rate loop_rate(50);
   ////////////////////////////////
-  ExternalCamera ex_cam;
   FindRob find_rob(NULL);
   IplImage *imgsrc;
   CvSize imgSize = {640, 360};

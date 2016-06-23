@@ -36,8 +36,9 @@ static double getVideoTimeByIMUTime(uint32_t sec, uint32_t usec, double imutime)
   return imutime;
 }
 
-ROSThread::ROSThread(IMURecorder& imu, VideoRecorder& vid,
-  CMDReciever& cmd) : imuRec(imu), vidRec(vid), cmdRec(cmd) {
+ROSThread::ROSThread(IMURecorder& imu, VideoRecorder& vid, CMDReciever& cmd, 
+    ExternalCamera& ex_cam) : imuRec(imu), vidRec(vid),
+    cmdRec(cmd), ex_cam_(ex_cam) {
 
   running = false;
   toQuit = false;
@@ -136,6 +137,13 @@ void ROSThread::cmdCb(const keyboard::Key::ConstPtr msg) {
     }
     else {
       cout << "no image!" << endl;
+    }
+    if (ex_cam_.getCurImage(curImg)) {
+      cout << "save!" << endl;
+      cmdRec.SaveImage(curImg);
+    }
+    else {
+      cout << "no ex image" << endl;
     }
     break;
   }
