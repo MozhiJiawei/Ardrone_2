@@ -13,6 +13,13 @@
 #include <vector>
 #include <list>
 
+static void onMouse(int events, int x, int y, int flag, void *data);
+
+struct DataCallback {
+  std::vector<cv::Point2f> src_point_;
+  cv::Mat input_img;
+};
+
 class ExternalCamera {
 public:
   ExternalCamera();
@@ -33,10 +40,6 @@ private:
     int x_;
     int y_;
   };
-  struct DataCallback {
-    std::vector<cv::Point2f> src_point_;
-    cv::Mat input_img;
-  };
   std::list<RobotPosition> position_buffer_;
   std::vector<cv::Point2f> dst_points_;
   cv::Mat cur_img_;
@@ -44,7 +47,6 @@ private:
   
   void ImageProcess();
   void InitDstPoints(int rows, int columns);
-  void onMouse(int events, int x, int y, int flag, void *data);
 
   bool running_;
   bool toQuit_;

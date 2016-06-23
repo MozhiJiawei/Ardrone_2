@@ -27,8 +27,16 @@ void CMDReciever::SaveImage(const cv::Mat& src) {
   struct tm *a;
   time(&timep);
   a = localtime(&timep);
-  sprintf(filename, "/home/mozhi/Logs/%02d_%02d_%02d_%02d.bmp",
-    a->tm_mday, a->tm_hour, a->tm_min, a->tm_sec);
+  if(src.rows > 360) {
+    sprintf(filename, "/home/mozhi/Logs/%02d_%02d_%02d_%02d.bmp",
+        a->tm_mday, a->tm_hour, a->tm_min, a->tm_sec + 1);
+
+  }
+  else {
+    sprintf(filename, "/home/mozhi/Logs/%02d_%02d_%02d_%02d.bmp",
+        a->tm_mday, a->tm_hour, a->tm_min, a->tm_sec);
+
+  }
 
   cout << "Save image to" << endl << filename << endl;
   cv::imwrite(filename, src);

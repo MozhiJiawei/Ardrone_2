@@ -128,6 +128,9 @@ void ROSThread::cmdCb(const keyboard::Key::ConstPtr msg) {
     cmdRec.SetMode(MANUL);
     cmdRec.Key_D_Right();
     break;
+  case keyboard::Key::KEY_r:
+    ex_cam_.FindHomography();
+    break;
   default:
     cv::Mat curImg;
     vidRec.getImage(curImg, tm);

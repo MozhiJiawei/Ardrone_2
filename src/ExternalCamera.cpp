@@ -24,21 +24,21 @@ void ExternalCamera::getRobotPosition(int & robot_x, int & robot_y) {
 void ExternalCamera::setHomographyFromXML() {
   cv::FileStorage fs("homography.xml", FileStorage::READ);
   if (!fs.isOpened()) {
-    cout << "cannot open file" << std::endl;
+    std::cout << "cannot open file" << std::endl;
   }
   fs["Homography"] >> homography_;
 }
 
 void ExternalCamera::FindHomography() {
   if (cur_img_.empty()) {
-    cout << "find homography failed" << std::endl;
-    cout << "cannot open external camera!!" << std::endl;
+    std::cout << "find homography failed" << std::endl;
+    std::cout << "cannot open external camera!!" << std::endl;
     return;
   }
   DataCallback data_cb;
   cv::Mat img;
   cv::namedWindow("Find Homo", WINDOW_AUTOSIZE);
-  pthred_mutex_lock(&mutex_);
+  pthread_mutex_lock(&mutex_);
   img = cur_img_.clone();
   pthread_mutex_unlock(&mutex_); 
   data_cb.input_img = img;
@@ -51,7 +51,7 @@ void ExternalCamera::FindHomography() {
       break;
     }
   }
-  cv::findHomography(src_points, dst_points_, homography_);
+  cv::findHomography(data_cb.src_point_, dst_points_, homography_);
   cv::FileStorage fs("homography.xml", FileStorage::WRITE);
   fs << "Homography" << homography_;
 }
@@ -73,7 +73,7 @@ void ExternalCamera::InitDstPoints(int rows, int columns) {
 
 }
 
-void ExternalCamera::onMouse(int events, int x, int y, int flag, void * data) {
+static void onMouse(int events, int x, int y, int flag, void * data) {
   DataCallback* data_cb = (DataCallback *)data;
   cv::Mat img = data_cb->input_img.clone();
   if (events == EVENT_LBUTTONDOWN) {
@@ -85,7 +85,7 @@ void ExternalCamera::onMouse(int events, int x, int y, int flag, void * data) {
   for (int i = 0; i < data_cb->src_point_.size(); ++i) {
     cv::circle(img, 
       cv::Point(data_cb->src_point_[i].x, data_cb->src_point_[i].y),
-      3, cv::Scalar(0));
+      4, cv::Scalar(0), 3);
   }
   cv::imshow("Find Homo", img);
 }
@@ -98,7 +98,7 @@ void ExternalCamera::Start() {
 }
 
 void ExternalCamera::Loop() {
-  cv::VideoCapture cap(1);
+  cv::VideoCapture cap(0);
   cv::namedWindow("Video", 1);
   cv::Mat frame;
   while (!toQuit_) {
