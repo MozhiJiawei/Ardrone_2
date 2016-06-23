@@ -35,6 +35,7 @@ void ExternalCamera::FindHomography() {
     std::cout << "cannot open external camera!!" << std::endl;
     return;
   }
+  InitDstPoints(3, 4);
   DataCallback data_cb;
   cv::Mat img;
   cv::namedWindow("Find Homo", WINDOW_AUTOSIZE);
@@ -70,6 +71,12 @@ void ExternalCamera::ImageProcess() {
 }
 
 void ExternalCamera::InitDstPoints(int rows, int columns) {
+  double scale = 10;
+  for (int x = 0; x < columns; ++x) {
+    for (int y = 0; y < rows; ++y) {
+      dst_points_.push_back(cv::Point2f(x * scale, y * scale));
+    }
+  }
 
 }
 
