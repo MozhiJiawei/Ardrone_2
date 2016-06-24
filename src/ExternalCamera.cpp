@@ -12,6 +12,8 @@ ExternalCamera::ExternalCamera() {
   toQuit_ = false;
   threadID_ = 0;
   pthread_mutex_init(&mutex_, 0);
+  is_show_dst_ = false;
+  setHomographyFromXML();
   Start();
 }
 bool ExternalCamera::isRobotExists() {
@@ -25,6 +27,8 @@ void ExternalCamera::setHomographyFromXML() {
   cv::FileStorage fs("homography.xml", FileStorage::READ);
   if (!fs.isOpened()) {
     std::cout << "cannot open file" << std::endl;
+    FindHomography();
+    return;
   }
   fs["Homography"] >> homography_;
 }
@@ -71,13 +75,12 @@ void ExternalCamera::ImageProcess() {
 }
 
 void ExternalCamera::InitDstPoints(int rows, int columns) {
-  double scale = 10;
+  double scale = 100;
   for (int x = 0; x < columns; ++x) {
     for (int y = 0; y < rows; ++y) {
       dst_points_.push_back(cv::Point2f(x * scale, y * scale));
     }
   }
-
 }
 
 static void onMouse(int events, int x, int y, int flag, void * data) {
@@ -113,7 +116,13 @@ void ExternalCamera::Loop() {
     pthread_mutex_lock(&mutex_);
     cur_img_ = frame.clone();
     pthread_mutex_unlock(&mutex_);
-    cv::imshow("Video", cur_img_);
+    cv::warpPerspective(frame, dst_img_, homography_, cv::Size(400,400));
+    if(is_show_dst_) {
+      cv::imshow("Video", dst_img_);
+    }
+    else {
+      cv::imshow("Video", cur_img_);
+    }
     cv::waitKey(3);
   }
 }

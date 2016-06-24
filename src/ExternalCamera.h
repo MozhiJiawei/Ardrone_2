@@ -32,6 +32,7 @@ public:
   void setHomographyFromXML();
   void FindHomography();
   bool getCurImage(cv::Mat &img);
+  void ChangeShowing();
 
 private:
   struct RobotPosition {
@@ -43,7 +44,9 @@ private:
   std::list<RobotPosition> position_buffer_;
   std::vector<cv::Point2f> dst_points_;
   cv::Mat cur_img_;
+  cv::Mat dst_img_;
   cv::Mat homography_;
+  bool is_show_dst_;
   
   void ImageProcess();
   void InitDstPoints(int rows, int columns);

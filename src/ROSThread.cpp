@@ -131,6 +131,9 @@ void ROSThread::cmdCb(const keyboard::Key::ConstPtr msg) {
   case keyboard::Key::KEY_r:
     ex_cam_.FindHomography();
     break;
+  case keyboard::Key::KEY_t:
+    ex_cam_.ChangeShowing();
+    break;
   default:
     cv::Mat curImg;
     vidRec.getImage(curImg, tm);
