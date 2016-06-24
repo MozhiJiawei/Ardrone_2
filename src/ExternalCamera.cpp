@@ -72,7 +72,16 @@ bool ExternalCamera::getCurImage(cv::Mat &img) {
   if (camera_img_.empty()) {
     return false;
   }
-  img = camera_img_.clone();
+  switch(showing_stuff_) {
+    case 0:
+      img = camera_img_.clone();
+      break;
+    case 1:
+      img = img_me_.clone();
+      break;
+    case 2:
+      img = img_enemy_.clone();
+  }
   pthread_mutex_unlock(&mutex_);
   return true;
 }
@@ -127,13 +136,13 @@ void ExternalCamera::Loop() {
     cap >> frame;
     pthread_mutex_lock(&mutex_);
     camera_img_ = frame.clone();
-    pthread_mutex_unlock(&mutex_);
     if(homography_me_.cols != 3 || homography_enemy_.cols != 3) {
       FindHomography();
       continue;
     }
     cv::warpPerspective(frame, img_me_, homography_me_, cv::Size(600,600));
     cv::warpPerspective(frame, img_enemy_, homography_enemy_,cv::Size(600,600));
+    pthread_mutex_unlock(&mutex_);
     switch(showing_stuff_) {
       case 0:
       cv::imshow("Video", camera_img_);
