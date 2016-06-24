@@ -33,6 +33,7 @@
 #include "VideoRecorder.h"
 #include "SearchNumber.h"
 #include "PID.h"
+#include "ExternalCamera.h"
 
 #include "time.h"
 #include <opencv2/opencv.hpp>
@@ -99,8 +100,9 @@ void *Control_loop(void *param) {
   VideoRecorder videoreader("/home/mozhi/Record/video_ts.txt",
                             "/home/mozhi/Record/video.avi");
 
+  ExternalCamera ex_cam;
   double img_time;
-  ROSThread thread(imureader, videoreader, cmdreader);
+  ROSThread thread(imureader, videoreader, cmdreader, ex_cam);
   thread.showVideo = true;
   ros::Rate loop_rate(50);
   ////////////////////////////////

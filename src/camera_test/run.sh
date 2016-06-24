@@ -1,2 +1,2 @@
 #!/bin/bash
-g++ `pkg-config opencv --cflags` usbc	am.cpp  -o main `pkg-config opencv --libs`
+g++ `pkg-config opencv --cflags` usbcam.cpp  -o main `pkg-config opencv --libs`

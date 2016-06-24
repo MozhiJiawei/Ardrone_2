@@ -7,7 +7,9 @@ install_manifest.txt
 
 *.*~
 *.swp
+*.xml
 
+/.vscode/
 /catkin/
 CTestTestfile.cmake
 /catkin_generated/
@@ -17,5 +19,8 @@ CTestTestfile.cmake
 /CMakeFiles/
 /build/CMakeFiles/
 /build/gtest/CMakeFiles/
+
+/src/camera_test/main
+/src/camera_test/*.bmp
 
 ARDRONE_L-H

@@ -36,8 +36,9 @@ static double getVideoTimeByIMUTime(uint32_t sec, uint32_t usec, double imutime)
   return imutime;
 }
 
-ROSThread::ROSThread(IMURecorder& imu, VideoRecorder& vid,
-  CMDReciever& cmd) : imuRec(imu), vidRec(vid), cmdRec(cmd) {
+ROSThread::ROSThread(IMURecorder& imu, VideoRecorder& vid, CMDReciever& cmd, 
+    ExternalCamera& ex_cam) : imuRec(imu), vidRec(vid),
+    cmdRec(cmd), ex_cam_(ex_cam) {
 
   running = false;
   toQuit = false;
@@ -127,6 +128,12 @@ void ROSThread::cmdCb(const keyboard::Key::ConstPtr msg) {
     cmdRec.SetMode(MANUL);
     cmdRec.Key_D_Right();
     break;
+  case keyboard::Key::KEY_r:
+    ex_cam_.FindHomography();
+    break;
+  case keyboard::Key::KEY_t:
+    ex_cam_.ChangeShowing();
+    break;
   default:
     cv::Mat curImg;
     vidRec.getImage(curImg, tm);
@@ -136,6 +143,13 @@ void ROSThread::cmdCb(const keyboard::Key::ConstPtr msg) {
     }
     else {
       cout << "no image!" << endl;
+    }
+    if (ex_cam_.getCurImage(curImg)) {
+      cout << "save!" << endl;
+      cmdRec.SaveImage(curImg);
+    }
+    else {
+      cout << "no ex image" << endl;
     }
     break;
   }
