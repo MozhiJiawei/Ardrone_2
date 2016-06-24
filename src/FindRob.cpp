@@ -38,8 +38,10 @@ void FindRob::ReInit(IplImage *img)
   minX=640, maxX=0, minY=360, maxY=0;
   GroundRadius = 0;
   RobotRadius = 0;
+  GroundDir = 0;
 
   isEdge = 0;
+  isEdgeConfirm = 0;
   FlagRobotExist = 0;
   FlagGroundCenterExist = 0;
   FlagSearRob = 0;
@@ -94,6 +96,8 @@ void FindRob::ReInit(IplImage *img)
 //analyze red
 void FindRob::SearchRobot(IplImage *src)
 {  
+  if(FlagSearRob != 0) return;
+
   cvErode(src,src,NULL,1);
   cvDilate(src,src,NULL,4);
   cvErode(src,src,NULL,1);
@@ -140,13 +144,25 @@ void FindRob::SearchRobot(IplImage *src)
   RobotRadius = cvRound(RobRadius-5);
   cvCircle (OriginImg, RobotCenter, RobotRadius, CV_RGB(225, 250, 225), 3, 8, 0);
   if(RobCont->v_next != NULL && RobRadius > 50)
-  {
+  {    
     CvPoint2D32f center1;
-    float r1;
-    cvMinEnclosingCircle( RobCont->v_next, &center1, &r1);    
+    float r1 = 0;
+    for(tempcont = RobCont->v_next; tempcont !=NULL; tempcont = tempcont->h_next)//find largest circle
+    {    
+      cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);    
+      if(tempR > r1)
+      {
+        center1 = tempCenter;
+        r1 = tempR;
+      }
     //cvCircle (img, cvPoint(cvRound(center1.x), cvRound(center1.y)), cvRound(r1), CV_RGB(0, 255, 127), 3, 8, 0);
-
-    if(RobCont->v_next->h_next != NULL)
+    }
+    if((r1 > (RobRadius/5)) && (sqrt( (center1.x-RobCenter.x)*(center1.x-RobCenter.x) + (center1.y-RobCenter.y)*(center1.y-RobCenter.y) ) > (RobRadius/4)))//judge whether is side black circle
+    {
+      RobotBlackPoint = cvPointFrom32f(center1);
+      cvCircle (OriginImg, RobotBlackPoint, cvRound(r1), CV_RGB(25, 200, 255), 3, 8, 0);
+    }
+    /*if(RobCont->v_next->h_next != NULL)
     {
       CvPoint2D32f center2;
       float r2;
@@ -162,17 +178,20 @@ void FindRob::SearchRobot(IplImage *src)
         r1 = r2;
       }
       cvCircle (OriginImg, RobotBlackPoint, cvRound(r1), CV_RGB(25, 200, 255), 3, 8, 0);
-    }    
+    }*/    
   }
   }
   }
   FlagSearRob = 1;
+  if(contour!=NULL) cvClearSeq(contour);
   cvReleaseMemStorage( &storage );
 }
 
 //analyze yellow
 void FindRob::AnalyzeGround(IplImage *src)
 {
+  if(FlagAnaGrou != 0) return;
+
   cvErode(src,src,NULL,1);
 #if TestShowImg && ShowGroundT
   cvNamedWindow("ground yellow threshold",0);
@@ -180,14 +199,16 @@ void FindRob::AnalyzeGround(IplImage *src)
   cvMoveWindow("ground yellow threshold", 60, 350);
   cvWaitKey(1);
 #endif
-  CvMemStorage *storage = cvCreateMemStorage(0);
+  CvMemStorage *storage = cvCreateMemStorage(0), *storage1 = cvCreateMemStorage(0);
   CvSeq *contour = 0, *RobCont = 0, *tempcont = 0;
   int contours = 0;
   contours = cvFindContours( src, storage, &contour, sizeof(CvContour), CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
 
-  //find min bounding rect
+  //find min bounding rect, and find maxcontour
   CvRect recttemp;
   int tempx=0, tempy=0;
+  int maxArea = 0, tempArea = 0;
+  CvSeq *maxcont = 0, *cont = 0;
   for(tempcont = contour; tempcont!=NULL; tempcont = tempcont->h_next)
   {
     recttemp = cvBoundingRect(tempcont, 0);
@@ -209,6 +230,14 @@ void FindRob::AnalyzeGround(IplImage *src)
       if(tempy > maxY)
         maxY = tempy;      
     }
+
+    //find maxcont
+    tempArea = fabs(cvContourArea(tempcont));
+    if(tempArea > maxArea)
+    {
+      maxcont = tempcont;
+      maxArea = tempArea;
+    }
   }//cout<<"maxXminXmaxYminY:"<<maxX<<" "<<minX<<" "<<maxY<<" "<<minY<<endl;
   if(minX > 5)//left
     isEdge += 2;
@@ -221,23 +250,83 @@ void FindRob::AnalyzeGround(IplImage *src)
 
   switch(isEdge)
   {
-    case 1:{maxX -= 10;minX -= 300;}break;
-    case 2:{minX += 10;maxX += 300;}break;
-    case 4:{maxY -= 10;minY -= 300;}break;
-    case 8:{minY += 10;maxY += 300;}break;
+    case 1:{maxX -= 10;minX -= 300;maxY += 300;minY -= 300;}break;
+    case 2:{minX += 10;maxX += 300;maxY += 300;minY -= 300;}break;
+    case 4:{maxY -= 10;minY -= 300;maxX += 300;minX -= 300;}break;
+    case 8:{minY += 10;maxY += 300;maxX += 300;minX -= 300;}break;
     case 9:{minY += 10;maxX -= 10;maxY += 300;minX -= 300;}break;
     case 10:{minY += 10;minX += 10;maxY += 300;maxX += 300;}break;
     case 5:{maxY -= 10;maxX -= 10;minY -= 300;minX -= 300;}break;
     case 6:{maxY -= 10;minX += 10;minY -= 300;maxX += 300;}break;
   }
+//try to confirm the ground angle
+  if(maxArea > 1000)
+  {
+    //ni he zhi xian
+    cont = cvApproxPoly(maxcont, sizeof(CvContour), storage1, CV_POLY_APPROX_DP, cvContourPerimeter(maxcont)*0.005, 0);
+    cvDrawContours(OriginImg, cont, CV_RGB(225, 220, 25), CV_RGB(25, 20, 255), 0, 2);
+    
+    bool flagpredis = 0, flagnextdis = 0;
+    for(int i=0; i<cont->total; ++i)
+    {      
+      CvPoint *pt0 = (CvPoint*)cvGetSeqElem( cont, i-1 ),
+        *pt1 = (CvPoint*)cvGetSeqElem( cont, i ),
+        *pt2 = (CvPoint*)cvGetSeqElem( cont, i-2 );
+      if(ptdistance(pt0, pt1) > 60 && ((pt0->x >10 && pt0->x <630 && pt0->y >10 && pt0->y <350) || (pt1->x >10 && pt1->x <630 && pt1->y >10 && pt1->y <350))) 
+        flagnextdis = 1;
+
+      if(flagpredis && flagnextdis)
+      {
+        if(fabs(angle(pt1, pt2, pt0)) < 0.17)//is 90 degree(+-10)
+        {          
+          cvCircle (OriginImg, *pt0, 10, CV_RGB(125, 100, 255), 2, 8, 0);
+          double dx1 = pt1->x - pt0->x, dy1 = pt1->y - pt0->y;
+          if(fabs(dx1) > fabs(dy1))
+          {
+            if(dx1 < 0)
+            {
+              GroundDir = asin(dy1 / sqrt(dx1*dx1 + dy1*dy1));
+            }
+            else
+            {
+              GroundDir = -asin(dy1 / sqrt(dx1*dx1 + dy1*dy1));
+            }
+          }
+          else
+          {
+            dx1 = pt2->x - pt0->x;
+            dy1 = pt2->y - pt0->y;
+            if(dx1 < 0)
+            {
+              GroundDir = asin(dy1 / sqrt(dx1*dx1 + dy1*dy1));
+            }
+            else
+            {
+              GroundDir = -asin(dy1 / sqrt(dx1*dx1 + dy1*dy1));
+            }
+          }          
+          break;
+        }
+      }
+      flagpredis = flagnextdis;
+      flagnextdis = 0;
+    }
+    if(cont!=NULL) cvClearSeq(cont);
+    cvReleaseMemStorage( &storage1 );
+  }
 //cout<<"after-maxXminXmaxYminY:"<<maxX<<" "<<minX<<" "<<maxY<<" "<<minY<<endl;
   FlagAnaGrou = 1;
-  cvReleaseMemStorage( &storage );
+  if(contour!=NULL) cvClearSeq(contour);  
+  cvReleaseMemStorage( &storage );  
 }
 
 //analyze blue
 void FindRob::FindGroundCenter(IplImage *src)
 {
+  if(FlagFindGrCenter != 0) return;
+
+  if(FlagAnaGrou == 0)
+    AnalyzeGround(ImgForYellow);
   cvErode(src,src,NULL,2);
 #if TestShowImg && ShowGroundCenterT
   cvNamedWindow("ground center blue threshold",0);
@@ -260,18 +349,38 @@ void FindRob::FindGroundCenter(IplImage *src)
     //double face;
     CvPoint2D32f RobCenter, tempCenter;
     float RobRadius = 0, tempR = 0;
-    int edge = isGroundEdge();
+    int edge = isEdge;//isGroundEdge(),mistake here
     while(tempcont != NULL)
     {
       cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);
       if(tempR > RobRadius)
       { 
-        if(edge==0 || (edge!=0 && tempCenter.x>minX && tempCenter.x<maxX && tempCenter.y>minY && tempCenter.y<maxY))
+        if(edge==0 || (edge!=0 && tempCenter.x>(minX+100) && tempCenter.x<(maxX-100) && tempCenter.y>(minY+100) && tempCenter.y<(maxY-100)))
         {
         RobCenter = tempCenter;
         RobRadius = tempR;
         RobCont = tempcont;  
         }        
+      }
+
+      if(tempR > 20)//judge whether the blue is edge
+      {
+        if((8 & isEdge) && tempCenter.y<(minY+100))
+        {
+          isEdgeConfirm += 8;
+        }
+        if((4 & isEdge) && tempCenter.y>(maxY-100))
+        {
+          isEdgeConfirm += 4;
+        }
+        if((2 & isEdge) && tempCenter.x<(minX+100))
+        {
+          isEdgeConfirm += 2;
+        }
+        if((1 & isEdge) && tempCenter.x>(maxX-100))
+        {
+          isEdgeConfirm += 1;
+        }
       }
       tempcont = tempcont->h_next;
     }
@@ -286,6 +395,7 @@ void FindRob::FindGroundCenter(IplImage *src)
       }    
   }
   FlagFindGrCenter = 1;
+  //cvClearSeq(contour);
   cvReleaseMemStorage( &storage );
 }
 
@@ -294,13 +404,25 @@ int FindRob::isGroundEdge()
 {
   if(FlagAnaGrou == 0)
     AnalyzeGround(ImgForYellow);
+  if(FlagFindGrCenter == 0)
+    FindGroundCenter(ImgForBlue);
 
-  return isEdge;
+  return isEdgeConfirm;
+}
+
+double FindRob::getGroundDir()
+{
+  if(FlagAnaGrou == 0)
+    AnalyzeGround(ImgForYellow);
+
+  return GroundDir;
 }
 
 //for blue
 CvPoint FindRob::getGroundCenter()
 {
+  if(FlagAnaGrou == 0)
+    AnalyzeGround(ImgForYellow);
   if(FlagFindGrCenter == 0)
     FindGroundCenter(ImgForBlue);
 
@@ -365,4 +487,21 @@ double FindRob::getRobDir()
       ang = -3.1415 - ang;
   }
   return ang;
+}
+
+//
+double FindRob::angle( CvPoint* pt1, CvPoint* pt2, CvPoint* pt0 )
+{
+    double dx1 = pt1->x - pt0->x;
+    double dy1 = pt1->y - pt0->y;
+    double dx2 = pt2->x - pt0->x;
+    double dy2 = pt2->y - pt0->y;
+    return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2));// + 1e-10
+}
+
+double FindRob::ptdistance(CvPoint* pt1, CvPoint* pt2)
+{
+  double dx1 = pt1->x - pt2->x;
+  double dy1 = pt1->y - pt2->y;
+  return sqrt(dx1*dx1 + dy1*dy1);
 }

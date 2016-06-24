@@ -36,6 +36,7 @@ public:
   bool doesRobotExist();
 
   //about ground,about yellow
+  double getGroundDir();//return direction of ground according to yellow grid, + means plane should turn left
   int isGroundEdge();//does edge appear in the camera?0-no, 8-forward, 4-back, 2-left, 1-right, 10-forward left, 9-forward right, 6-back left, 5-back right
   
   //GroundCenter,about blue
@@ -53,10 +54,12 @@ private:
   CvPoint RobotBlackPoint;
   CvPoint GroundCenter;
   int GroundRadius;
-  int isEdge;
+  int isEdge,//from yellow
+    isEdgeConfirm;//combine yellow and blue
   bool FlagRobotExist;
   bool FlagGroundCenterExist; 
-  int minX, maxX, minY, maxY;//to remember the area which is not outside edge 
+  int minX, maxX, minY, maxY;//to remember the area which is not outside edge
+  double GroundDir;
 
   void SearchRobot(IplImage *src);
   bool FlagSearRob;
@@ -64,6 +67,9 @@ private:
   bool FlagAnaGrou;
   void FindGroundCenter(IplImage *src);
   bool FlagFindGrCenter;
+
+  double angle( CvPoint* pt1, CvPoint* pt2, CvPoint* pt0 );//finds a cosine of angle between vectors,from pt0->pt1 and from pt0->pt2
+  double ptdistance(CvPoint* pt1, CvPoint* pt2);//cal distance of two points
 };
 
 #endif // !defined(AFX_FINDROB_H__72A23126_B93C_4525_9F91_B5C7F379DC83__INCLUDED_)
