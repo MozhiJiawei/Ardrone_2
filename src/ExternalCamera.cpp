@@ -25,11 +25,6 @@ void ExternalCamera::getRobotPosition(int & robot_x, int & robot_y) {
 
 void ExternalCamera::setHomographyFromXML() {
   cv::FileStorage fs("homography.xml", FileStorage::READ);
-  if (!fs.isOpened()) {
-    std::cout << "cannot open file" << std::endl;
-    FindHomography();
-    return;
-  }
   fs["Homography_me"] >> homography_me_;
   fs["Homography_enemy"] >> homography_enemy_;
 }
@@ -59,6 +54,7 @@ void ExternalCamera::FindHomography() {
         homography_me_ = cv::findHomography(data_cb.src_point_, dst_points_);
         fs << "Homography_me" << homography_me_;
         is_enemy = true;
+        data_cb.src_point_.clear();
         continue;
       }
       else {
@@ -132,6 +128,10 @@ void ExternalCamera::Loop() {
     pthread_mutex_lock(&mutex_);
     camera_img_ = frame.clone();
     pthread_mutex_unlock(&mutex_);
+    if(homography_me_.cols != 3 || homography_enemy_.cols != 3) {
+      FindHomography();
+      continue;
+    }
     cv::warpPerspective(frame, img_me_, homography_me_, cv::Size(600,600));
     cv::warpPerspective(frame, img_enemy_, homography_enemy_,cv::Size(600,600));
     switch(showing_stuff_) {
@@ -142,7 +142,7 @@ void ExternalCamera::Loop() {
       cv::imshow("Video", img_me_);
       break;
       case 2:
-      cv::imshow("Video", img_enemy_)
+      cv::imshow("Video", img_enemy_);
       break;
     }
     cv::waitKey(5);
