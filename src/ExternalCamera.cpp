@@ -12,7 +12,7 @@ ExternalCamera::ExternalCamera() {
   toQuit_ = false;
   threadID_ = 0;
   pthread_mutex_init(&mutex_, 0);
-  is_show_dst_ = false;
+  showing_stuff_ = 0;
   setHomographyFromXML();
   Start();
 }
@@ -30,21 +30,24 @@ void ExternalCamera::setHomographyFromXML() {
     FindHomography();
     return;
   }
-  fs["Homography"] >> homography_;
+  fs["Homography_me"] >> homography_me_;
+  fs["Homography_enemy"] >> homography_enemy_;
 }
 
 void ExternalCamera::FindHomography() {
-  if (cur_img_.empty()) {
+  bool is_enemy = false;
+  cv::FileStorage fs("homography.xml", FileStorage::WRITE);
+  if (camera_img_.empty()) {
     std::cout << "find homography failed" << std::endl;
     std::cout << "cannot open external camera!!" << std::endl;
     return;
   }
-  InitDstPoints(3, 4);
+  InitDstPoints(5, 5);
   DataCallback data_cb;
   cv::Mat img;
   cv::namedWindow("Find Homo", WINDOW_AUTOSIZE);
   pthread_mutex_lock(&mutex_);
-  img = cur_img_.clone();
+  img = camera_img_.clone();
   pthread_mutex_unlock(&mutex_); 
   data_cb.input_img = img;
   cv::imshow("Find Homo", img);
@@ -52,23 +55,36 @@ void ExternalCamera::FindHomography() {
   while (true) {
     int c = cv::waitKey(0);
     if ((char)c == 27) {
-      cv::destroyWindow("Find Homo");
-      break;
+      if(!is_enemy) {
+        homography_me_ = cv::findHomography(data_cb.src_point_, dst_points_);
+        fs << "Homography_me" << homography_me_;
+        is_enemy = true;
+        continue;
+      }
+      else {
+        homography_enemy_ = cv::findHomography(data_cb.src_point_,dst_points_);
+        fs << "Homography_enemy" << homography_enemy_;
+        cv::destroyWindow("Find Homo");
+        break;
+      }
     }
   }
-  cv::findHomography(data_cb.src_point_, dst_points_, homography_);
-  cv::FileStorage fs("homography.xml", FileStorage::WRITE);
-  fs << "Homography" << homography_;
 }
 
 bool ExternalCamera::getCurImage(cv::Mat &img) {
   pthread_mutex_lock(&mutex_);
-  if (cur_img_.empty()) {
+  if (camera_img_.empty()) {
     return false;
   }
-  img = cur_img_.clone();
+  img = camera_img_.clone();
   pthread_mutex_unlock(&mutex_);
   return true;
+}
+
+void ExternalCamera::ChangeShowing() {
+  if(++showing_stuff_ ==3){
+    showing_stuff_ = 0;
+  }
 }
 
 void ExternalCamera::ImageProcess() {
@@ -76,9 +92,9 @@ void ExternalCamera::ImageProcess() {
 
 void ExternalCamera::InitDstPoints(int rows, int columns) {
   double scale = 100;
-  for (int x = 0; x < columns; ++x) {
-    for (int y = 0; y < rows; ++y) {
-      dst_points_.push_back(cv::Point2f(x * scale, y * scale));
+  for (int y = 0; y < rows; ++y) {
+    for (int x = 0; x < columns; ++x) {
+      dst_points_.push_back(cv::Point2f((x+1) * scale, (y+1) * scale));
     }
   }
 }
@@ -114,16 +130,22 @@ void ExternalCamera::Loop() {
   while (!toQuit_) {
     cap >> frame;
     pthread_mutex_lock(&mutex_);
-    cur_img_ = frame.clone();
+    camera_img_ = frame.clone();
     pthread_mutex_unlock(&mutex_);
-    cv::warpPerspective(frame, dst_img_, homography_, cv::Size(400,400));
-    if(is_show_dst_) {
-      cv::imshow("Video", dst_img_);
+    cv::warpPerspective(frame, img_me_, homography_me_, cv::Size(600,600));
+    cv::warpPerspective(frame, img_enemy_, homography_enemy_,cv::Size(600,600));
+    switch(showing_stuff_) {
+      case 0:
+      cv::imshow("Video", camera_img_);
+      break;
+      case 1:
+      cv::imshow("Video", img_me_);
+      break;
+      case 2:
+      cv::imshow("Video", img_enemy_)
+      break;
     }
-    else {
-      cv::imshow("Video", cur_img_);
-    }
-    cv::waitKey(3);
+    cv::waitKey(5);
   }
 }
 

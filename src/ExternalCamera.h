@@ -43,10 +43,15 @@ private:
   };
   std::list<RobotPosition> position_buffer_;
   std::vector<cv::Point2f> dst_points_;
-  cv::Mat cur_img_;
-  cv::Mat dst_img_;
-  cv::Mat homography_;
-  bool is_show_dst_;
+  cv::Mat camera_img_;
+  cv::Mat img_me_;
+  cv::Mat img_enemy_;
+  cv::Mat homography_me_;
+  cv::Mat homography_enemy_;
+  // 0 -- camera(default) 
+  // 1 -- me
+  // 2 -- enemy
+  int showing_stuff_;
   
   void ImageProcess();
   void InitDstPoints(int rows, int columns);
