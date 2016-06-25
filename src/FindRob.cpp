@@ -5,6 +5,16 @@
 //#include "stdafx.h"
 #include "FindRob.h"
 
+//1-main switch for the following show many images for test,0-close the function
+#define TestShowImg 1
+
+//1-show robot threshold pic,0-close the function
+#define ShowRobotT 1
+//1-show ground threshold pic,0-close the function
+#define ShowGroundT 1
+//1-show ground center threshold pic,0-close the function
+#define ShowGroundCenterT 1
+
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -14,6 +24,7 @@ FindRob::FindRob(IplImage *img)
   ImgForRob = cvCreateImage( cvSize(640, 360), IPL_DEPTH_8U, 1);
   ImgForBlue = cvCreateImage( cvSize(640, 360), IPL_DEPTH_8U, 1);
   ImgForYellow = cvCreateImage( cvSize(640, 360), IPL_DEPTH_8U, 1);
+  OriImg = cvCreateImage( cvSize(640, 360), IPL_DEPTH_8U, 3);
   if(img != NULL)
   {
     ReInit(img);
@@ -27,13 +38,14 @@ FindRob::~FindRob()
 
 void FindRob::ReInit(IplImage *img)
 {
+  cvCopy( img, OriImg);
   OriginImg = img;
   
   //cvCopy(img, InputImg);
   RobotCenter.x = 320;
   RobotCenter.y = 180;
   RobotBlackPoint.x = 320;
-  RobotBlackPoint.y = -100;
+  RobotBlackPoint.y = 500;
   GroundCenter = cvPoint(-100, -100);
   minX=640, maxX=0, minY=360, maxY=0;
   GroundRadius = 0;
@@ -68,9 +80,11 @@ void FindRob::ReInit(IplImage *img)
         q[i*ImgForRob->nChannels+(j)*ImgForRob->widthStep]=255;          
       }
       else
+        /*
         if((a+b+c)>600)//let white circle be white
           q[i*ImgForRob->nChannels+(j)*ImgForRob->widthStep]=255;
         else
+        */
           q[i*ImgForRob->nChannels+(j)*ImgForRob->widthStep]=0;
 
       if((c-a)>0 && (b-a)>0)//for yellow
@@ -99,8 +113,8 @@ void FindRob::SearchRobot(IplImage *src)
   if(FlagSearRob != 0) return;
 
   cvErode(src,src,NULL,1);
-  cvDilate(src,src,NULL,4);
-  cvErode(src,src,NULL,1);
+  //cvDilate(src,src,NULL,4);
+  //cvErode(src,src,NULL,1);
 #if TestShowImg && ShowRobotT
   cvNamedWindow("robot threshold",0);
   cvShowImage("robot threshold", ImgForRob);
@@ -121,28 +135,106 @@ void FindRob::SearchRobot(IplImage *src)
   //double face;
   CvPoint2D32f RobCenter, tempCenter;
   float RobRadius = 0, tempR = 0;
-  int edge = isGroundEdge();
+  //int edge = isGroundEdge();
+
+  CvRect recttemp, maxrect;
+  maxrect.x = 0;
+  maxrect.y = 0;
+  maxrect.width  = 0;
+  maxrect.height = 0;
   while(tempcont != NULL)
   {
-    cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);
+    //cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);
+    //use retangle to find the largest as robot
+    recttemp = cvBoundingRect(tempcont, 0);
     //cout<<"radius of circle:"<<tempR<<endl;
-    if(tempR > RobRadius)
+    //if(tempR > RobRadius)
+    if((recttemp.width * recttemp.height) > (maxrect.width * maxrect.height))
     {
-      if(edge==0 || (edge!=0 && tempCenter.x>minX && tempCenter.x<maxX && tempCenter.y>minY && tempCenter.y<maxY))
+      maxrect = recttemp;
+      RobCont = tempcont;
+      /*if(edge==0 || (edge!=0 && tempCenter.x>minX && tempCenter.x<maxX && tempCenter.y>minY && tempCenter.y<maxY))
       {
         RobCenter = tempCenter;
         RobRadius = tempR;
         RobCont = tempcont;
-      }
+      }*/
     }
     tempcont = tempcont->h_next;
   }
+
+  if(RobCont != NULL)
+  {
+    cvMinEnclosingCircle( RobCont, &RobCenter, &RobRadius);
+  }
+
+
   if(RobRadius > 20)//avoid misregconize small points as robot
   {
   FlagRobotExist = 1;
   RobotCenter = cvPointFrom32f(RobCenter);
   RobotRadius = cvRound(RobRadius-5);
   cvCircle (OriginImg, RobotCenter, RobotRadius, CV_RGB(225, 250, 225), 3, 8, 0);
+
+  //find the white circle in robot
+  int a = 0, b = 0, c = 0;
+  IplImage *imgwhite = cvCreateImage( cvSize(640, 360), IPL_DEPTH_8U, 1);
+  unsigned char* p = (unsigned char*)(OriImg->imageData);
+  unsigned char* q = (unsigned char*)(imgwhite->imageData);
+  for(int i=maxrect.x; i<maxrect.x+maxrect.width; ++i)
+  {
+		for(int j=maxrect.y; j<maxrect.y+maxrect.height; ++j)
+		{
+      a=(int)p[i*OriImg->nChannels+(j)*OriImg->widthStep];
+      b=(int)p[i*OriImg->nChannels+(j)*OriImg->widthStep+1];
+      c=(int)p[i*OriImg->nChannels+(j)*OriImg->widthStep+2];
+      if((a+b+c) > 600)
+        q[i*imgwhite->nChannels+(j)*imgwhite->widthStep]=255;
+    }
+  }
+#if TestShowImg && ShowRobotT
+  cvErode(imgwhite, imgwhite, NULL, 1);
+  cvNamedWindow("robot white circle",0);
+  cvShowImage("robot white circle", imgwhite);
+  cvMoveWindow("robot white circle", 600, 600);
+  cvWaitKey(1);
+#endif
+  CvMemStorage *storage1 = cvCreateMemStorage(0);
+  CvSeq *contwhite = 0;
+  int contourswhite = 0;
+  contourswhite = cvFindContours( imgwhite, storage1, &contwhite, sizeof(CvContour), CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+  cout<<"cont white:"<<contourswhite<<endl;
+  if(contourswhite > 0)
+  {
+    CvSeq * maxcontwhite = contwhite;
+    CvPoint2D32f center1;
+    float r1 = 0;
+    for(tempcont = contwhite; tempcont != NULL; tempcont = tempcont->h_next)//find largest white circle
+    {    
+      cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);    
+      if(tempR > r1)
+      {
+        center1 = tempCenter;
+        r1 = tempR;
+      }
+      cout<<"r1: "<<r1<<endl;
+    }
+    if(r1 > (RobRadius/5))
+    {
+      RobotBlackPoint = cvPointFrom32f(center1);
+      cout<<"white point:"<<RobotBlackPoint.x<<" "<<RobotBlackPoint.y<<", r:"<<r1<<endl;
+      cvCircle (OriginImg, RobotBlackPoint, cvRound(r1), CV_RGB(25, 200, 255), 3, 8, 0);
+    }
+
+    cvReleaseImage(&imgwhite);
+    //if(contwhite != NULL) 
+    //{
+      //cvClearSeq(contwhite);
+      cvReleaseMemStorage( &storage1 );
+    //}
+  }
+
+  /*
   if(RobCont->v_next != NULL && RobRadius > 50)
   {    
     CvPoint2D32f center1;
@@ -162,6 +254,8 @@ void FindRob::SearchRobot(IplImage *src)
       RobotBlackPoint = cvPointFrom32f(center1);
       cvCircle (OriginImg, RobotBlackPoint, cvRound(r1), CV_RGB(25, 200, 255), 3, 8, 0);
     }
+  }*/
+    //
     /*if(RobCont->v_next->h_next != NULL)
     {
       CvPoint2D32f center2;
@@ -178,13 +272,17 @@ void FindRob::SearchRobot(IplImage *src)
         r1 = r2;
       }
       cvCircle (OriginImg, RobotBlackPoint, cvRound(r1), CV_RGB(25, 200, 255), 3, 8, 0);
-    }*/    
-  }
+    }*/      
   }
   }
   FlagSearRob = 1;
-  if(contour!=NULL) cvClearSeq(contour);
-  cvReleaseMemStorage( &storage );
+  
+  //if(contour!=NULL) cvClearSeq(contour);
+  //{
+    //
+  cout<<"analyze red done!\n";
+    cvReleaseMemStorage( &storage );
+  //}
 }
 
 //analyze yellow
@@ -311,12 +409,13 @@ void FindRob::AnalyzeGround(IplImage *src)
       flagpredis = flagnextdis;
       flagnextdis = 0;
     }
-    if(cont!=NULL) cvClearSeq(cont);
+    //if(cont!=NULL) cvClearSeq(cont);
     cvReleaseMemStorage( &storage1 );
   }
 //cout<<"after-maxXminXmaxYminY:"<<maxX<<" "<<minX<<" "<<maxY<<" "<<minY<<endl;
   FlagAnaGrou = 1;
-  if(contour!=NULL) cvClearSeq(contour);  
+  cout<<"analyze yellow done!\n";
+  //if(contour!=NULL) cvClearSeq(contour);  
   cvReleaseMemStorage( &storage );  
 }
 
@@ -395,6 +494,7 @@ void FindRob::FindGroundCenter(IplImage *src)
       }    
   }
   FlagFindGrCenter = 1;
+  cout<<"analyze blue done!\n";
   //cvClearSeq(contour);
   cvReleaseMemStorage( &storage );
 }
@@ -475,11 +575,11 @@ double FindRob::getRobDir()
   if(FlagSearRob == 0)
     SearchRobot(ImgForRob);
 
-  double ang = asin((double)(RobotCenter.x-RobotBlackPoint.x) /
+  double ang = - asin((double)(RobotCenter.x-RobotBlackPoint.x) /
     sqrt((RobotCenter.x-RobotBlackPoint.x) * (RobotCenter.x-RobotBlackPoint.x) + 
     (RobotBlackPoint.y-RobotCenter.y) * (RobotBlackPoint.y-RobotCenter.y)));
 
-  if(RobotBlackPoint.y < RobotCenter.y)
+  if(RobotBlackPoint.y > RobotCenter.y)
   {
     if(ang > 0)
       ang = 3.1415 - ang;
