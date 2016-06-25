@@ -142,7 +142,7 @@ void ExternalCamera::Loop() {
     FindHomography();
   }
   ros::Rate rate(20);
-  while (ros.ok() && !toQuit_) {
+  while (ros::ok() && !toQuit_) {
     pthread_mutex_lock(&mutex_);
     cap >> camera_img_;
     cv::warpPerspective(camera_img_, img_me_, homography_me_, 
@@ -183,5 +183,5 @@ void ExternalCamera::End() {
 
 void * ExternalCamera::ThreadProc(void * data) {
   ExternalCamera* external_camera = (ExternalCamera*)data;
-  external_camera-Loop();
+  external_camera->Loop();
 }
