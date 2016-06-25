@@ -5,6 +5,7 @@
  *      Author: ljw
  */
 #include "ExternalCamera.h"
+#include "ros/ros.h"
 using namespace cv;
 
 ExternalCamera::ExternalCamera() {
@@ -136,35 +137,34 @@ void ExternalCamera::Loop() {
     return;
   }
   //cv::namedWindow("Video", 1);
-  cv::Mat frame;
-  while (!toQuit_) {
-    cap >> frame;
-    if(homography_me_.cols != 3 || homography_enemy_.cols != 3) {
-      camera_img_ = frame.clone();
-      FindHomography();
-      continue;
-    }
-    else {
-      pthread_mutex_lock(&mutex_);
-      camera_img_ = frame.clone();
-      cv::warpPerspective(frame, img_me_, homography_me_, cv::Size(600,600));
-      cv::warpPerspective(frame,img_enemy_,homography_enemy_,cv::Size(600,600));
-      pthread_mutex_unlock(&mutex_);
-      switch(showing_stuff_) {
-        /*
-        case 0:
-          cv::imshow("Video", camera_img_);
-          break;
-        case 1:
-          cv::imshow("Video", img_me_);
-          break;
-        case 2:
-          cv::imshow("Video", img_enemy_);
-          break;
-          */
-      }
-      cv::waitKey(5);
-    }
+  if (homography_me_.cols != 3 || homography_enemy_.cols != 3) {
+    cap >> camera_img_;
+    FindHomography();
+  }
+  ros::Rate rate(20);
+  while (ros.ok() && !toQuit_) {
+    pthread_mutex_lock(&mutex_);
+    cap >> camera_img_;
+    cv::warpPerspective(camera_img_, img_me_, homography_me_, 
+        cv::Size(600, 600));
+
+    cv::warpPerspective(camera_img_, img_enemy_, homography_enemy_,
+        cv::Size(600, 600));
+
+    pthread_mutex_unlock(&mutex_);
+    rate.sleep();
+    //switch(showing_stuff_) {
+    //  case 0:
+    //    cv::imshow("Video", camera_img_);
+    //    break;
+    //  case 1:
+    //    cv::imshow("Video", img_me_);
+    //    break;
+    //  case 2:
+    //    cv::imshow("Video", img_enemy_);
+    //    break;
+    //}
+    //cv::waitKey(5);
   }
 }
 
@@ -183,5 +183,5 @@ void ExternalCamera::End() {
 
 void * ExternalCamera::ThreadProc(void * data) {
   ExternalCamera* external_camera = (ExternalCamera*)data;
-  external_camera->Loop();
+  external_camera-Loop();
 }

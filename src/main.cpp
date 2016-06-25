@@ -111,6 +111,7 @@ void *Control_loop(void *param) {
   CvSize imgSize = {640, 360};
   imgsrc = cvCreateImage(imgSize, IPL_DEPTH_8U, 3);
   Mat imgmat;
+  cv::Mat ex_img;
   
   system("rosservice call /ardrone/setcamchannel 1");
   //system("rosservice call /ardrone/flattrim");
@@ -160,8 +161,9 @@ void *Control_loop(void *param) {
   double flying_scale = 300;
 
   double tf_errorx, tf_errory, tf_errorturn;
-  cvNamedWindow("a", 1);
-  cvMoveWindow("a", 600, 350);
+  cvNamedWindow("Drone_Video", 1);
+  cv::namedWindow("Ex_Video");
+  cvMoveWindow("Drone_Video", 600, 350);
   while (ros::ok()) {
     usleep(1000);
     if (videoreader.newframe) {
@@ -205,6 +207,7 @@ void *Control_loop(void *param) {
 
           if (abs(errorx) < 30 && abs(errory) < 30 && upd == 0) {
             errorturn = find_rob.getGroundDir();
+            errorturn = 0;
             turnleftr = errorturn * 10;
             CLIP3(-0.15, turnleftr, 0.15);
             if(abs(errorturn) < 0.08) {
@@ -370,7 +373,10 @@ void *Control_loop(void *param) {
         drone.hover();
       }
     }
-    cvShowImage("a", imgsrc);
+    if (ex_cam.getCurImage(ex_img)) {
+      cv::imshow("Ex_Video", ex_img);
+    }
+    cvShowImage("Drone_Video", imgsrc);
     cv::waitKey(1);
   }
   drone.land();
