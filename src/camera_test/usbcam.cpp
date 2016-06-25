@@ -10,6 +10,10 @@ int main(int argc, char *argv[])
   //cvNamedWindow("Video", 1);
 
   cv::VideoCapture cap(1);
+  if(!cap.isOpened()) {
+    std::cout << "Cannot Open Camera!" << std::endl; 
+    return 0;
+  }
   cv::namedWindow("Video", 1);
   cv::Mat frame;
   while (1)

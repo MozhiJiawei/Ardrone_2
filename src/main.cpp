@@ -151,8 +151,8 @@ void *Control_loop(void *param) {
   double robot_x = 1, robot_y = 0;
   double drone_x, drone_y;
   double targetx = 320, targety = 185;
-  double takeoff_altitude = 1200;
-  double follow_altitude = 1200;
+  double takeoff_altitude = 1800;
+  double follow_altitude = 1800;
 
   double takeoff_time;
   int pid_stable_count = 0;
@@ -204,14 +204,20 @@ void *Control_loop(void *param) {
           turnleftr = 0;
 
           if (abs(errorx) < 30 && abs(errory) < 30 && upd == 0) {
-            pid_stable_count++;
-            if (pid_stable_count >= 4) {
-              log << "TakeOff Complete!!! Folowing Robot" << std::endl;
-              drone_tf.SetRefPose(0, img_time);
-              next_mode = TOROBOT;
-              pid.PIDReset();
-              //next_mode = FOLLOWROBOT;
-              //next_mode = SEARCHING;
+            errorturn = find_rob.getGroundDir();
+            turnleftr = errorturn * 10;
+            CLIP3(-0.15, turnleftr, 0.15);
+            if(abs(errorturn) < 0.08) {
+              pid_stable_count++;
+              if (pid_stable_count >= 4) {
+                log << "TakeOff Complete!!! Folowing Robot" << std::endl;
+                drone_tf.SetRefPose(0, img_time);
+                next_mode = TAKEOFF;
+                //next_mode = TOROBOT;
+                pid.PIDReset();
+                //next_mode = FOLLOWROBOT;
+                //next_mode = SEARCHING;
+              }
             }
           }
           else {
@@ -221,6 +227,9 @@ void *Control_loop(void *param) {
                 << "  forwardb = " << forwardb << std::endl;
 
             log << "errorx = " << errorx << "  leftr = " << leftr << std::endl;
+            log << "errorturn = " << errorturn 
+                << " turn = " << turnleftr << std::endl;
+
           }
         }
         break;

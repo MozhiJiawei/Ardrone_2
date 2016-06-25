@@ -81,6 +81,7 @@ bool ExternalCamera::getCurImage(cv::Mat &img) {
       break;
     case 2:
       img = img_enemy_.clone();
+      break;
   }
   pthread_mutex_unlock(&mutex_);
   return true;
@@ -129,32 +130,41 @@ void ExternalCamera::Start() {
 }
 
 void ExternalCamera::Loop() {
-  cv::VideoCapture cap(0);
-  cv::namedWindow("Video", 1);
+  cv::VideoCapture cap(1);
+  if(!cap.isOpened()) {
+    std::cout << "Cannot Open Video." << std::endl;
+    return;
+  }
+  //cv::namedWindow("Video", 1);
   cv::Mat frame;
   while (!toQuit_) {
     cap >> frame;
-    pthread_mutex_lock(&mutex_);
-    camera_img_ = frame.clone();
     if(homography_me_.cols != 3 || homography_enemy_.cols != 3) {
+      camera_img_ = frame.clone();
       FindHomography();
       continue;
     }
-    cv::warpPerspective(frame, img_me_, homography_me_, cv::Size(600,600));
-    cv::warpPerspective(frame, img_enemy_, homography_enemy_,cv::Size(600,600));
-    pthread_mutex_unlock(&mutex_);
-    switch(showing_stuff_) {
-      case 0:
-      cv::imshow("Video", camera_img_);
-      break;
-      case 1:
-      cv::imshow("Video", img_me_);
-      break;
-      case 2:
-      cv::imshow("Video", img_enemy_);
-      break;
+    else {
+      pthread_mutex_lock(&mutex_);
+      camera_img_ = frame.clone();
+      cv::warpPerspective(frame, img_me_, homography_me_, cv::Size(600,600));
+      cv::warpPerspective(frame,img_enemy_,homography_enemy_,cv::Size(600,600));
+      pthread_mutex_unlock(&mutex_);
+      switch(showing_stuff_) {
+        /*
+        case 0:
+          cv::imshow("Video", camera_img_);
+          break;
+        case 1:
+          cv::imshow("Video", img_me_);
+          break;
+        case 2:
+          cv::imshow("Video", img_enemy_);
+          break;
+          */
+      }
+      cv::waitKey(5);
     }
-    cv::waitKey(5);
   }
 }
 
