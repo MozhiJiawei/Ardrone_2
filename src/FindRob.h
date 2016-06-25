@@ -14,11 +14,6 @@
 #include <highgui.h>
 #include <cv.h>
 
-#define TestShowImg 1//1-main switch for the following show many images for test,0-close the function
-#define ShowRobotT 1//1-show robot threshold pic,0-close the function
-#define ShowGroundT 1//1-show ground threshold pic,0-close the function
-#define ShowGroundCenterT 1//1-show ground center threshold pic,0-close the function
-
 using namespace std;
 
 class FindRob  
@@ -46,6 +41,7 @@ public:
 
 private:
   IplImage *OriginImg,
+    *OriImg,
     *ImgForRob,
     *ImgForYellow,
     *ImgForBlue;
