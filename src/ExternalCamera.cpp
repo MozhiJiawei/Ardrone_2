@@ -71,6 +71,7 @@ void ExternalCamera::FindHomography() {
 bool ExternalCamera::getCurImage(cv::Mat &img) {
   pthread_mutex_lock(&mutex_);
   if (camera_img_.empty()) {
+    pthread_mutex_unlock(&mutex_);
     return false;
   }
   switch(showing_stuff_) {
