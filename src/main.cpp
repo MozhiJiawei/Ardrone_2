@@ -151,8 +151,8 @@ void *Control_loop(void *param) {
   ///////////////////////////////////////////////////////////
   double robot_x = -0.8, robot_y = 1;
   double drone_x, drone_y;
-  double targetx = 320, targety = 185;
-  double takeoff_altitude = 1800;
+  double targetx = 320, targety = 120;
+  double takeoff_altitude = 1200;
   double follow_altitude = 1800;
 
   double takeoff_time;
@@ -176,15 +176,16 @@ void *Control_loop(void *param) {
       videoreader.getImage(imgmat, img_time);
       *imgsrc = imgmat;
       find_rob.ReInit(imgsrc);
+      find_rob.doesRobotExist();
       switch (cur_mode) {
       case START:
         LogCurTime(log);
         log << "START!!! TAKEOFF NOW" << std::endl;
         drone.hover();
-        drone.takeOff();
-        takeoff_time = (double)ros::Time::now().toSec();
-        while ((double)ros::Time::now().toSec() < takeoff_time + 5);
-        next_mode = TAKEOFF;
+        //drone.takeOff();
+        //takeoff_time = (double)ros::Time::now().toSec();
+        //while ((double)ros::Time::now().toSec() < takeoff_time + 5);
+        next_mode = FOLLOWROBOT;
         break;
       case TAKEOFF:
         LogCurTime(log);
@@ -229,10 +230,17 @@ void *Control_loop(void *param) {
               log << "errorx = " << errorx << "  leftr = " << leftr << std::endl;
               log << "upd = " << upd << std::endl;
               */
-              log << "Turning!!!" << std::endl << errorturn = " << errorturn 
+              log << "Turning!!!" << std::endl << "errorturn ="  << errorturn 
                   << " turn = " << turnleftr << std::endl;
 
             }
+          }
+        }
+        else {
+          upd = pid.PIDZ(takeoff_altitude, 50);
+          CLIP3(-0.2, upd, 0.2);
+          if(upd == 0) {
+            next_mode = FOLLOWROBOT;
           }
         }
         break;
@@ -287,18 +295,19 @@ void *Control_loop(void *param) {
           CLIP3(10.0, centery, 350.0);
           errory = centery - targety;
           errorx = centerx - targetx;
-          forwardb = pid.PIDXY(errory, 1000);
-          leftr = pid.PIDXY(errorx, 1000, false);
+          forwardb = pid.PIDXY(errory, 800);
+          leftr = pid.PIDXY(errorx, 800, false);
           upd = pid.PIDZ(90, 10, false);
-          CLIP3(-0.1, leftr, 0.1);
-          CLIP3(-0.1, forwardb, 0.1);
+          CLIP3(-0.05, leftr, 0.05);
+          CLIP3(-0.05, forwardb, 0.05);
           CLIP3(-0.2, upd, 0.2);
           turnleftr = 0;
-          if (abs(find_rob.getRobDir()) < 1.57) {
+          if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.0) {
             next_mode = SEARCHING;
           }
+          log << "rob direction = " << find_rob.getRobDir() << std::endl;
 
-          if (abs(errorx) < 30 && abs(errory) < 30) {
+          if (abs(errorx) < 10 && abs(errory) < 10) {
             forwardb = 0;
             leftr = 0;
           }
@@ -314,19 +323,22 @@ void *Control_loop(void *param) {
             */
           }
         } else {
+          //forwardb = 0;
+          //leftr = 0;
           upd = 0;
-          // TOROBOT.
+          log << "Cannot Find Robot." << std::endl;
         }
         break;
       case SEARCHING:
         LogCurTime(log);
+        log << "Leave Robot" << std::endl;
         forwardb = -0.1;
         leftr = 0;
         upd = 0;
         turnleftr = 0;
-        searching_time = ros::Time::now().toSec();
-        if (ros::Time::now().toSec() > searching_time + 2) {
-          next_mode = TOCENTER;
+        if(!find_rob.doesRobotExist()) {
+          forwardb = 0;
+          drone.hover();
         }
         break;
       default:
