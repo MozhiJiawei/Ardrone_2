@@ -203,7 +203,7 @@ void FindRob::SearchRobot(IplImage *src)
   CvSeq *contwhite = 0;
   int contourswhite = 0;
   contourswhite = cvFindContours( imgwhite, storage1, &contwhite, sizeof(CvContour), CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-  cout<<"cont white:"<<contourswhite<<endl;
+  //cout<<"cont white:"<<contourswhite<<endl;
   if(contourswhite > 0)
   {
     CvSeq * maxcontwhite = contwhite;
@@ -217,12 +217,12 @@ void FindRob::SearchRobot(IplImage *src)
         center1 = tempCenter;
         r1 = tempR;
       }
-      cout<<"r1: "<<r1<<endl;
+      //cout<<"r1: "<<r1<<endl;
     }
     if(r1 > (RobRadius/5))
     {
       RobotBlackPoint = cvPointFrom32f(center1);
-      cout<<"white point:"<<RobotBlackPoint.x<<" "<<RobotBlackPoint.y<<", r:"<<r1<<endl;
+      //cout<<"white point:"<<RobotBlackPoint.x<<" "<<RobotBlackPoint.y<<", r:"<<r1<<endl;
       cvCircle (OriginImg, RobotBlackPoint, cvRound(r1), CV_RGB(25, 200, 255), 3, 8, 0);
     }
 
@@ -280,7 +280,7 @@ void FindRob::SearchRobot(IplImage *src)
   //if(contour!=NULL) cvClearSeq(contour);
   //{
     //
-  cout<<"analyze red done!\n";
+  //cout<<"analyze red done!\n";
     cvReleaseMemStorage( &storage );
   //}
 }
@@ -414,7 +414,7 @@ void FindRob::AnalyzeGround(IplImage *src)
   }
 //cout<<"after-maxXminXmaxYminY:"<<maxX<<" "<<minX<<" "<<maxY<<" "<<minY<<endl;
   FlagAnaGrou = 1;
-  cout<<"analyze yellow done!\n";
+  //cout<<"analyze yellow done!\n";
   //if(contour!=NULL) cvClearSeq(contour);  
   cvReleaseMemStorage( &storage );  
 }
@@ -494,7 +494,7 @@ void FindRob::FindGroundCenter(IplImage *src)
       }    
   }
   FlagFindGrCenter = 1;
-  cout<<"analyze blue done!\n";
+  //cout<<"analyze blue done!\n";
   //cvClearSeq(contour);
   cvReleaseMemStorage( &storage );
 }
