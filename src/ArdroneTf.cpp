@@ -187,20 +187,16 @@ ArdroneTf::~ArdroneTf() {}
 tf::StampedTransform ArdroneTf::get_transform(const char *frame1,
                                               const char *frame2, double tm) {
 
-  /*
-  if(abs(tm) < 0.0000001) {
-    tm = (double)ros::Time::now().toSec();
-  }
-  */
   tf::StampedTransform trans;
   try {
-    // ros::Time now = ros::Time::now();
     ros::Time now(tm);
-    _listener.waitForTransform(frame1, frame2, now, ros::Duration(1.0));
-
+    if (abs(tm) > 0.0001) {
+      _listener.waitForTransform(frame1, frame2, now, ros::Duration(1.0));
+    }
     _listener.lookupTransform(frame1, frame2, now, trans);
 
-  } catch (tf::TransformException ex) {
+  }
+  catch (tf::TransformException ex) {
     ROS_ERROR("%s", ex.what());
     ros::Duration(1.0).sleep();
   }

@@ -156,6 +156,7 @@ void *Control_loop(void *param) {
   double follow_altitude = 1800;
 
   double takeoff_time;
+  double searching_time;
   int pid_stable_count = 0;
 
   double flying_scale = 300;
@@ -187,6 +188,7 @@ void *Control_loop(void *param) {
         break;
       case TAKEOFF:
         LogCurTime(log);
+        log << "Taking off" << std::endl;
         if (find_rob.doesGroundCenterExist()) {
           centerx = find_rob.getGroundCenter().x;
           centery = find_rob.getGroundCenter().y;
@@ -213,23 +215,22 @@ void *Control_loop(void *param) {
               if (pid_stable_count >= 4) {
                 log << "TakeOff Complete!!! Folowing Robot" << std::endl;
                 drone_tf.SetRefPose(0, img_time);
-                //next_mode = TAKEOFF;
                 next_mode = TOROBOT;
                 pid.PIDReset();
-                //next_mode = FOLLOWROBOT;
-                //next_mode = SEARCHING;
               }
             }
             else {
               pid_stable_count = 0;
+              /*
               log << "TAKEOFF!! altitude = " << thread.navdata.altd << std::endl;
               log << "errory = " << errory 
                 << "  forwardb = " << forwardb << std::endl;
 
               log << "errorx = " << errorx << "  leftr = " << leftr << std::endl;
               log << "upd = " << upd << std::endl;
-              log << "errorturn = " << errorturn 
-                << " turn = " << turnleftr << std::endl;
+              */
+              log << "Turning!!!" << std::endl << errorturn = " << errorturn 
+                  << " turn = " << turnleftr << std::endl;
 
             }
           }
@@ -278,6 +279,7 @@ void *Control_loop(void *param) {
         break;
       case FOLLOWROBOT:
         LogCurTime(log);
+        log << "Fllow Robot" << std::endl;
         if (find_rob.doesRobotExist()) {
           centerx = find_rob.getRobCenter().x;
           centery = find_rob.getRobCenter().y;
@@ -292,30 +294,16 @@ void *Control_loop(void *param) {
           CLIP3(-0.1, forwardb, 0.1);
           CLIP3(-0.2, upd, 0.2);
           turnleftr = 0;
+          if (abs(find_rob.getRobDir()) < 1.57) {
+            next_mode = SEARCHING;
+          }
 
-          if (abs(errorx) < 15 && abs(errory) < 15) {
-            //errorturn = find_rob.getRobDir();
-            //turnleftr = errorturn * 10;
-            //CLIP3(-0.15, turnleftr, 0.15);
+          if (abs(errorx) < 30 && abs(errory) < 30) {
             forwardb = 0;
             leftr = 0;
-            if (abs(errorturn) < 0.1 && upd == 0) {
-              turnleftr = 0;
-              if (pid_stable_count >= 4) {
-                log << "Finish Flowing Robot" << std::endl;
-                next_mode = TOCENTER;
-                pid.PIDReset();
-              }
-            }
-            else {
-              pid_stable_count = 0;
-              log << "TURNING!" << std::endl;
-              log << "errorturn = " << errorturn << "turnleftr = " 
-                  << turnleftr << std::endl;
-
-            }
           }
           else {
+            /*
             log << "PID to CENTER" << std::endl;
             log << "errorx = " << errorx << " errory = " << errory << std::endl
                 << "forward = " << forwardb << " leftr = " << leftr << std::endl;
@@ -323,6 +311,7 @@ void *Control_loop(void *param) {
             log << "altd = " << thread.navdata.altd << std::endl;
             log << "RobRadius = " << find_rob.getRobRadius() << std::endl;
             log << "upd = " << upd << std::endl;
+            */
           }
         } else {
           upd = 0;
@@ -331,17 +320,14 @@ void *Control_loop(void *param) {
         break;
       case SEARCHING:
         LogCurTime(log);
-        drone_tf.GetDiff(tf_errorx, tf_errory, tf_errorturn);
-        log << "vx = " << thread.navdata.vx << "vy = " << thread.navdata.vy 
-            << std::endl;
-
-        log << "tf_errorx = " << tf_errorx << "  tf_errory = " << tf_errory 
-            << "  tf_errorturn = " << tf_errorturn << std::endl;
-
-        forwardb = 0.05;
+        forwardb = -0.1;
         leftr = 0;
         upd = 0;
         turnleftr = 0;
+        searching_time = ros::Time::now().toSec();
+        if (ros::Time::now().toSec() > searching_time + 2) {
+          next_mode = TOCENTER;
+        }
         break;
       default:
         break;
