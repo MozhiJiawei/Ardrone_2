@@ -75,7 +75,7 @@ void FindRob::ReInit(IplImage *img)
       b=(int)p[i*img->nChannels+(j)*img->widthStep+1];
       c=(int)p[i*img->nChannels+(j)*img->widthStep+2];
         
-      if(c>100 && b<70 && a<200)//for robot
+      if((c-a)>80 && (c-b)>80)//for robotc>100 && b<70 && a<200
       {        
         q[i*ImgForRob->nChannels+(j)*ImgForRob->widthStep]=255;          
       }
@@ -179,6 +179,7 @@ void FindRob::SearchRobot(IplImage *src)
   //find the white circle in robot
   int a = 0, b = 0, c = 0;
   IplImage *imgwhite = cvCreateImage( cvSize(640, 360), IPL_DEPTH_8U, 1);
+  cvZero(imgwhite);
   unsigned char* p = (unsigned char*)(OriImg->imageData);
   unsigned char* q = (unsigned char*)(imgwhite->imageData);
   for(int i=maxrect.x; i<maxrect.x+maxrect.width; ++i)
