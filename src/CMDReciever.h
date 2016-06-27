@@ -17,7 +17,7 @@
 using namespace std;
 
 enum ModeType { TAKEOFF, TOCENTER, TOROBOT, FOLLOWROBOT, SEARCHING,  
-    START, MANUL, STOP };
+    OdoTest, START, MANUL, STOP };
 
 class CMDReciever {
 public:

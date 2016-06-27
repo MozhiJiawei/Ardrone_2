@@ -50,7 +50,8 @@ private:
   ofstream _log;
 
   tf::StampedTransform get_transform(const char* frame1, const char* frame2,
-    double tm = 0);
+    double tm = (double)ros::Time::now().toSec());
+    //double tm = 0);
   void LogCurTime();
 };
 

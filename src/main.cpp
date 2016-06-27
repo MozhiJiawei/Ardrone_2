@@ -186,6 +186,7 @@ void *Control_loop(void *param) {
         //takeoff_time = (double)ros::Time::now().toSec();
         //while ((double)ros::Time::now().toSec() < takeoff_time + 5);
         next_mode = FOLLOWROBOT;
+        next_mode = OdoTest;
         break;
       case TAKEOFF:
         LogCurTime(log);
@@ -297,15 +298,16 @@ void *Control_loop(void *param) {
           errorx = centerx - targetx;
           forwardb = pid.PIDXY(errory, 800);
           leftr = pid.PIDXY(errorx, 800, false);
-          upd = pid.PIDZ(90, 10, false);
+          upd = pid.PIDZ(70, 10, false);
           CLIP3(-0.05, leftr, 0.05);
           CLIP3(-0.05, forwardb, 0.05);
           CLIP3(-0.2, upd, 0.2);
           turnleftr = 0;
-          if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.0) {
-            next_mode = SEARCHING;
-          }
+
           log << "rob direction = " << find_rob.getRobDir() << std::endl;
+          if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.0) {
+            log << "Yes !!! We should Leave Robot" << std::endl;
+          }
 
           if (abs(errorx) < 10 && abs(errory) < 10) {
             forwardb = 0;
@@ -340,6 +342,12 @@ void *Control_loop(void *param) {
           forwardb = 0;
           drone.hover();
         }
+        break;
+      case OdoTest:
+        drone_tf.SetRefPose(0, img_time);
+        robot_x = 1;
+        robot_y = 1;
+        next_mode = TOROBOT;
         break;
       default:
         break;
