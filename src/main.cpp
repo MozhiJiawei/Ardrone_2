@@ -34,6 +34,7 @@
 #include "SearchNumber.h"
 #include "PID.h"
 #include "ExternalCamera.h"
+#include "NavIntegration.h"
 
 #include "time.h"
 #include <opencv2/opencv.hpp>
@@ -95,6 +96,7 @@ void *Control_loop(void *param) {
   ARDrone drone;
   drone.setup();
   ArdroneTf drone_tf("/home/mozhi/Logs/tf.txt");
+  NavIntegration drone_NI;
   CMDReciever cmdreader("/home/mozhi/Logs/cmd.txt", drone);
   IMURecorder imureader("/home/mozhi/Record/imu.txt");
   VideoRecorder videoreader("/home/mozhi/Record/video_ts.txt",
@@ -285,6 +287,11 @@ void *Control_loop(void *param) {
         }
         log << "errorx = " << errorx << "  forward = " << forwardb << std::endl;
         log << "errory = " << errory << "  leftr = " << leftr << std::endl;
+        drone_NI.Get(drone_x, drone_y);
+        errorx = drone_x - robot_x;
+        errory = drone_y - robot_y;
+        log << "errorx_NI = " << errorx << std::endl;
+        log << "errory_NI = " << errory << std::endl;
         break;
       case FOLLOWROBOT:
         LogCurTime(log);
@@ -345,6 +352,7 @@ void *Control_loop(void *param) {
         break;
       case OdoTest:
         drone_tf.SetRefPose(0, img_time);
+        drone_NI.Clear();
         robot_x = 1;
         robot_y = 1;
         next_mode = TOROBOT;

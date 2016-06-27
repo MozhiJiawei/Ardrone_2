@@ -22,6 +22,7 @@
 #include "VideoRecorder.h"
 #include "CMDReciever.h"
 #include "ExternalCamera.h"
+#include "NavIntegration.h"
 
 #include <deque>
 
@@ -45,8 +46,10 @@ class ROSThread {
     VideoRecorder& vidRec;
     CMDReciever& cmdRec;
     ExternalCamera& ex_cam_;
+    NavIntegration& drone_NI_;
 
     double tmIMU;
+    double lasttmIMU;
     ////////////////////////////////navdata
     ardrone_autonomy::Navdata navdata;
     /*
@@ -84,7 +87,7 @@ class ROSThread {
     void(*cbROSThread)(void);
   public:
     ROSThread(IMURecorder& imu, VideoRecorder& vidRec, CMDReciever& cmd,
-        ExternalCamera& ex_cam);
+        ExternalCamera& ex_cam, NavIntegration& drone_NI);
 
     virtual ~ROSThread();
     static void * threadProc(void*);

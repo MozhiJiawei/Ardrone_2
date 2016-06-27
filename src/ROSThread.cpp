@@ -37,8 +37,8 @@ static double getVideoTimeByIMUTime(uint32_t sec, uint32_t usec, double imutime)
 }
 
 ROSThread::ROSThread(IMURecorder& imu, VideoRecorder& vid, CMDReciever& cmd, 
-    ExternalCamera& ex_cam) : imuRec(imu), vidRec(vid),
-    cmdRec(cmd), ex_cam_(ex_cam) {
+    ExternalCamera& ex_cam, NavIntegration& drone_NI) : imuRec(imu), vidRec(vid),
+    cmdRec(cmd), ex_cam_(ex_cam), drone_NI_(drone_NI) {
 
   running = false;
   toQuit = false;
@@ -46,6 +46,7 @@ ROSThread::ROSThread(IMURecorder& imu, VideoRecorder& vid, CMDReciever& cmd,
   showVideo = true;
   threadId = 0;
   cbROSThread = 0;
+  lasttmIMU = 0;
   start();
 }
 
@@ -160,6 +161,10 @@ void ROSThread::cmdCb(const keyboard::Key::ConstPtr msg) {
 void ROSThread::navdataCb(const ardrone_autonomy::Navdata::ConstPtr navPtr) {
   tmIMU = navPtr->tm / 1000000.0;
   navdata = *navPtr;
+  if (lasttmIMU != 0) {
+    drone_NI_.Add(navdata.vx, navdata.vy, tmIMU - lasttmIMU);
+  }
+  lasttmIMU = tmIMU;
 }
 
 void ROSThread::vidCb(const sensor_msgs::ImageConstPtr img) {

@@ -189,12 +189,12 @@ tf::StampedTransform ArdroneTf::get_transform(const char *frame1,
 
   tf::StampedTransform trans;
   try {
-    ros::Time now(tm);
-    if (abs(tm) > 0.0001) {
-      _listener.waitForTransform(frame1, frame2, now, ros::Duration(1.0));
-    }
-    _listener.lookupTransform(frame1, frame2, now, trans);
-
+    //ros::Time now(tm);
+    //if (abs(tm) > 0.0001) {
+    //  _listener.waitForTransform(frame1, frame2, now, ros::Duration(1.0));
+    //}
+    //_listener.lookupTransform(frame1, frame2, now, trans);
+    _listener.lookupTransform(frame1, frame2, ros::Time(0), trans);
   }
   catch (tf::TransformException ex) {
     ROS_ERROR("%s", ex.what());
@@ -215,8 +215,8 @@ void ArdroneTf::SetRefPose(double angle_offset, double img_tm) {
   ref_qua.setEulerZYX(yaw_plane - angle_offset, pitch, roll);
 
   tf::Transform input(ref_qua, _ref_trans.getOrigin());
-  _ref_trans.setData(input);
-  _br.SetRefPose(input, "odom", "ref_pose");
+  //_ref_trans.setData(input);
+  _br.SetRefPose(_ref_trans, "odom", "ref_pose");
 
   // Log Info
   LogCurTime();
@@ -239,10 +239,10 @@ void ArdroneTf::GetDiff(double &error_x, double &error_y, double &error_turn) {
   double x_ref, y_ref;
   x_ref = 0;
   y_ref = 0;
-  ref_to_base = get_transform("ardrone_base_link", "ref_pose");
-  //ref_to_base = get_transform("ref_pose", "ardrone_base_link");
-  error_x = ref_to_base.getOrigin().x();
-  error_y = ref_to_base.getOrigin().y();
+  //ref_to_base = get_transform("ardrone_base_link", "ref_pose");
+  ref_to_base = get_transform("ref_pose", "ardrone_base_link");
+  error_x = -ref_to_base.getOrigin().x();
+  error_y = -ref_to_base.getOrigin().y();
 
   // Two ways to calculate error_turn
   ref_to_base = get_transform("ref_pose", "ardrone_base_link");

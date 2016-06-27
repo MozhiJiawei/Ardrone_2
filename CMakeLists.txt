@@ -42,6 +42,7 @@ set(SOURCE_FILES
   src/FindRob.cpp
   src/PID.cpp
   src/ExternalCamera.cpp
+  src/NavIntegration.cpp
   #blobtrack_sample.cpp
   #enteringblobdetection.cpp
   #src/ARVideo.cpp
