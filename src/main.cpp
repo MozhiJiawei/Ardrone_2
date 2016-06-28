@@ -102,7 +102,7 @@ void *Control_loop(void *param) {
   VideoRecorder videoreader("/home/mozhi/Record/video_ts.txt",
                             "/home/mozhi/Record/video.avi");
 
-  ExternalCamera ex_cam;
+  ExternalCamera ex_cam(0.35);
   double img_time;
   ROSThread thread(imureader, videoreader, cmdreader, ex_cam, drone_NI);
   thread.showVideo = true;

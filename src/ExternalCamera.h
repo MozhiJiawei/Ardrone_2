@@ -22,7 +22,7 @@ struct DataCallback {
 
 class ExternalCamera {
 public:
-  ExternalCamera();
+  ExternalCamera(double offset_y);
   ~ExternalCamera() {
     End();
   }
@@ -56,6 +56,8 @@ private:
   void ImageProcess();
   void InitDstPoints(int rows, int columns);
 
+  double offset_y_;
+  bool robotexist;
   bool running_;
   bool toQuit_;
   pthread_t threadID_;

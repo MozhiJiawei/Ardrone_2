@@ -8,7 +8,7 @@
 #include "ros/ros.h"
 using namespace cv;
 
-ExternalCamera::ExternalCamera() {
+ExternalCamera::ExternalCamera(double offset_y) {
   running_ = false;
   toQuit_ = false;
   threadID_ = 0;
@@ -18,10 +18,12 @@ ExternalCamera::ExternalCamera() {
   Start();
 }
 bool ExternalCamera::isRobotExists() {
-  return false;
+  return robotexist;
 }
 
 void ExternalCamera::getRobotPosition(int & robot_x, int & robot_y) {
+  robot_x = position_buffer_.back().x_;
+  robot_y = position_buffer_.back().y_ - offset_y_;
 }
 
 void ExternalCamera::setHomographyFromXML() {
@@ -31,6 +33,7 @@ void ExternalCamera::setHomographyFromXML() {
 }
 
 void ExternalCamera::FindHomography() {
+  pthread_mutex_lock(&mutex_);
   bool is_enemy = false;
   cv::FileStorage fs("homography.xml", FileStorage::WRITE);
   if (camera_img_.empty()) {
@@ -42,9 +45,7 @@ void ExternalCamera::FindHomography() {
   DataCallback data_cb;
   cv::Mat img;
   cv::namedWindow("Find Homo", WINDOW_AUTOSIZE);
-  pthread_mutex_lock(&mutex_);
   img = camera_img_.clone();
-  pthread_mutex_unlock(&mutex_); 
   data_cb.input_img = img;
   cv::imshow("Find Homo", img);
   cv::setMouseCallback("Find Homo", onMouse, &data_cb);
@@ -66,6 +67,7 @@ void ExternalCamera::FindHomography() {
       }
     }
   }
+  pthread_mutex_unlock(&mutex_); 
 }
 
 bool ExternalCamera::getCurImage(cv::Mat &img) {
@@ -96,6 +98,64 @@ void ExternalCamera::ChangeShowing() {
 }
 
 void ExternalCamera::ImageProcess() {
+  IplImage img = IplImage(img_me_), *sourImg = &img, *Imgthresh;
+  Imgthresh = cvCreateImage(CvSize(sourImg->width,sourImg->height) ,8 ,1);
+  int bl = 0, gr = 0, re = 0;
+  unsigned char *p = (unsigned char *)sourImg->imageData;
+  unsigned char *q = (unsigned char *)Imgthresh->imageData;
+  for (int i = 0; i < sourImg->width; ++i) {
+    for (int j = 0; j < sourImg->height; ++j) {
+      bl = (int)p[i*sourImg->nChannels + j*sourImg->widthStep];
+      gr = (int)p[i*sourImg->nChannels + j*sourImg->widthStep+1];
+      re = (int)p[i*sourImg->nChannels + j*sourImg->widthStep+2];
+      if ((re - bl) > 50 && (re - gr)>50)
+        q[i*Imgthresh->nChannels + j*Imgthresh->widthStep] = 255;
+      else
+        q[i*Imgthresh->nChannels + j*Imgthresh->widthStep] = 0;
+    }
+  }
+
+  CvMemStorage *storage = cvCreateMemStorage(0);
+  CvSeq *contour = 0, *robcont = 0, *tempcont = 0;
+  int numofcont = cvFindContours(Imgthresh, storage, &contour,
+      sizeof(CvContour), CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+
+  if (numofcont > 0) {
+    tempcont = contour;
+    robcont = contour;
+    CvPoint2D32f robcenter, tempcenter;
+    float robR = 0, tempR = 0;
+
+    while (tempcont != NULL) {
+      cvMinEnclosingCircle(tempcont, &tempcenter, &tempR);
+      if (tempR > robR) {
+        robcenter = tempcenter;
+        robR = tempR;
+        robcont = tempcont;
+      }
+      tempcont = tempcont->h_next;
+    }
+    if (robR > 20) {
+      robotexist = true;
+      RobotPosition rob_pos((300 - robcenter.x)*1.8 / 300, 
+          (400 - robcenter.y)*1.8 / 300);//calculate the real position
+
+      position_buffer_.push_back(rob_pos);
+      if (position_buffer_.size() > 10) {
+        position_buffer_.pop_front();
+      }
+    }
+    else {
+      robotexist = false;
+      position_buffer_.pop_front();
+    }
+  }
+  else {
+    robotexist = false;
+    position_buffer_.pop_front();
+  }
+  cvReleaseMemStorage(&storage);
+  cvReleaseImage(&Imgthresh);
 }
 
 void ExternalCamera::InitDstPoints(int rows, int columns) {
@@ -153,6 +213,7 @@ void ExternalCamera::Loop() {
         cv::Size(600, 600));
 
     pthread_mutex_unlock(&mutex_);
+    ImageProcess();
     rate.sleep();
     //switch(showing_stuff_) {
     //  case 0:
