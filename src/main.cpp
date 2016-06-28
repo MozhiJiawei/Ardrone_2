@@ -151,7 +151,8 @@ void *Control_loop(void *param) {
   ModeType cur_mode = STOP, next_mode = STOP;
   int frame_count = 0, lostframe = 0;
   ///////////////////////////////////////////////////////////
-  double robot_x = -0.8, robot_y = 1;
+  double robot_x = 0, robot_y = 0;
+  double last_robot_x, last_robot_y;
   double drone_x, drone_y;
   double targetx = 320, targety = 120;
   double takeoff_altitude = 1200;
@@ -252,8 +253,10 @@ void *Control_loop(void *param) {
         LogCurTime(log);
         //drone_tf.GetDiff(drone_x, drone_y, errorturn);
         drone_NI.Get(drone_x, drone_y);
-        forwardb = pid.PIDXY(drone_x * flying_scale, 500);
-        leftr = pid.PIDXY(drone_y * flying_scale, 500);
+        errorx = last_robot_x + drone_x;
+        errory = last_robot_y + drone_y;
+        forwardb = pid.PIDXY(last_robot_x * flying_scale, 500);
+        leftr = pid.PIDXY(last_robot_y * flying_scale, 500);
         CLIP3(-0.1, leftr, 0.1);
         CLIP3(-0.1, forwardb, 0.1);
         upd = 0;
@@ -317,7 +320,11 @@ void *Control_loop(void *param) {
           turnleftr = 0;
 
           log << "rob direction = " << find_rob.getRobDir() << std::endl;
-          if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.0) {
+          if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.0) { 
+            last_robot_x = robot_x;
+            last_robot_y = robot_y;
+            drone_NI.Clear();
+            next_mode = SEARCHING;
             log << "Yes !!! We should Leave Robot" << std::endl;
           }
 
@@ -352,7 +359,7 @@ void *Control_loop(void *param) {
         turnleftr = 0;
         if(!find_rob.doesRobotExist()) {
           forwardb = 0;
-          drone.hover();
+          next_mode = TOCENTER;
         }
         break;
       case OdoTest:
