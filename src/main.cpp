@@ -254,10 +254,10 @@ void *Control_loop(void *param) {
         log << "TOCENTER!!!" << std::endl;
         //drone_tf.GetDiff(drone_x, drone_y, errorturn);
         drone_NI.Get(drone_x, drone_y);
-        errorx = last_robot_x + drone_x;
-        errory = last_robot_y + drone_y;
-        forwardb = pid.PIDXY(last_robot_x * flying_scale, 500);
-        leftr = pid.PIDXY(last_robot_y * flying_scale, 500);
+        errorx = drone_x + last_robot_x;
+        errory = drone_y + last_robot_y;
+        forwardb = pid.PIDXY(errorx * flying_scale, 500);
+        leftr = pid.PIDXY(errory * flying_scale, 500);
         CLIP3(-0.1, leftr, 0.1);
         CLIP3(-0.1, forwardb, 0.1);
         upd = 0;
@@ -360,6 +360,7 @@ void *Control_loop(void *param) {
         upd = 0;
         turnleftr = 0;
         if(!find_rob.doesRobotExist()) {
+          
           forwardb = 0;
           next_mode = TOCENTER;
         }
@@ -402,7 +403,7 @@ void *Control_loop(void *param) {
     cvShowImage("Drone_Video", imgsrc);
     cv::waitKey(1);
   }
-  drone.land();
+ drone.land();
   cvReleaseImage(&imgsrc);
   return 0;
 }
