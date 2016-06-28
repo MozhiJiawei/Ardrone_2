@@ -251,6 +251,7 @@ void *Control_loop(void *param) {
         break;
       case TOCENTER:
         LogCurTime(log);
+        log << "TOCENTER!!!" << std::endl;
         //drone_tf.GetDiff(drone_x, drone_y, errorturn);
         drone_NI.Get(drone_x, drone_y);
         errorx = last_robot_x + drone_x;
@@ -267,6 +268,7 @@ void *Control_loop(void *param) {
             pid.PIDReset();
           }
         }
+        log << "errorx = " << errorx << " errory = " << errory << std::endl;
         break;
       case TOROBOT:
         LogCurTime(log);
