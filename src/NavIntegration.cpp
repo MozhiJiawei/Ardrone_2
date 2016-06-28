@@ -25,8 +25,8 @@ void NavIntegration::Clear() {
 
 void NavIntegration::Add(double vx, double vy, double duration) {
   pthread_mutex_lock(&mutex_);
-  x_ += vx * duration;
-  y_ += vy * duration;
+  x_ += vx * duration / 1000;
+  y_ += vy * duration / 1000;
   pthread_mutex_unlock(&mutex_);
 }
 

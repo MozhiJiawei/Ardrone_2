@@ -104,7 +104,7 @@ void *Control_loop(void *param) {
 
   ExternalCamera ex_cam;
   double img_time;
-  ROSThread thread(imureader, videoreader, cmdreader, ex_cam);
+  ROSThread thread(imureader, videoreader, cmdreader, ex_cam, drone_NI);
   thread.showVideo = true;
   ros::Rate loop_rate(50);
   ////////////////////////////////
@@ -188,7 +188,7 @@ void *Control_loop(void *param) {
         //takeoff_time = (double)ros::Time::now().toSec();
         //while ((double)ros::Time::now().toSec() < takeoff_time + 5);
         next_mode = FOLLOWROBOT;
-        next_mode = OdoTest;
+        //next_mode = OdoTest;
         break;
       case TAKEOFF:
         LogCurTime(log);
@@ -218,7 +218,8 @@ void *Control_loop(void *param) {
               pid_stable_count++;
               if (pid_stable_count >= 4) {
                 log << "TakeOff Complete!!! Folowing Robot" << std::endl;
-                drone_tf.SetRefPose(0, img_time);
+                //drone_tf.SetRefPose(0, img_time);
+                drone_NI.Clear();
                 next_mode = TOROBOT;
                 pid.PIDReset();
               }
@@ -249,7 +250,8 @@ void *Control_loop(void *param) {
         break;
       case TOCENTER:
         LogCurTime(log);
-        drone_tf.GetDiff(drone_x, drone_y, errorturn);
+        //drone_tf.GetDiff(drone_x, drone_y, errorturn);
+        drone_NI.Get(drone_x, drone_y);
         forwardb = pid.PIDXY(drone_x * flying_scale, 500);
         leftr = pid.PIDXY(drone_y * flying_scale, 500);
         CLIP3(-0.1, leftr, 0.1);
@@ -265,7 +267,8 @@ void *Control_loop(void *param) {
         break;
       case TOROBOT:
         LogCurTime(log);
-        drone_tf.GetDiff(drone_x, drone_y, errorturn);
+        //drone_tf.GetDiff(drone_x, drone_y, errorturn);
+        drone_NI.Get(drone_x, drone_y);
         errorx = drone_x - robot_x;
         errory = drone_y - robot_y;
         forwardb = pid.PIDXY(errorx * flying_scale, 500);
@@ -292,6 +295,8 @@ void *Control_loop(void *param) {
         errory = drone_y - robot_y;
         log << "errorx_NI = " << errorx << std::endl;
         log << "errory_NI = " << errory << std::endl;
+        log << "vx = " << thread.navdata.vx << std::endl;
+        log << "vy = " << thread.navdata.vy << std::endl;
         break;
       case FOLLOWROBOT:
         LogCurTime(log);
@@ -306,8 +311,8 @@ void *Control_loop(void *param) {
           forwardb = pid.PIDXY(errory, 800);
           leftr = pid.PIDXY(errorx, 800, false);
           upd = pid.PIDZ(70, 10, false);
-          CLIP3(-0.05, leftr, 0.05);
-          CLIP3(-0.05, forwardb, 0.05);
+          CLIP3(-0.1, leftr, 0.1);
+          CLIP3(-0.1, forwardb, 0.1);
           CLIP3(-0.2, upd, 0.2);
           turnleftr = 0;
 
@@ -316,12 +321,12 @@ void *Control_loop(void *param) {
             log << "Yes !!! We should Leave Robot" << std::endl;
           }
 
-          if (abs(errorx) < 10 && abs(errory) < 10) {
+          if (abs(errorx) < 30 && abs(errory) < 30) {
             forwardb = 0;
             leftr = 0;
           }
           else {
-            /*
+            
             log << "PID to CENTER" << std::endl;
             log << "errorx = " << errorx << " errory = " << errory << std::endl
                 << "forward = " << forwardb << " leftr = " << leftr << std::endl;
@@ -329,7 +334,7 @@ void *Control_loop(void *param) {
             log << "altd = " << thread.navdata.altd << std::endl;
             log << "RobRadius = " << find_rob.getRobRadius() << std::endl;
             log << "upd = " << upd << std::endl;
-            */
+            
           }
         } else {
           //forwardb = 0;
