@@ -83,7 +83,7 @@ void CMDReciever::RunNextMode(ModeType mode, double y_left, double x_forward,
   }
 
   switch (mode) {
-  case TAKEOFF:
+  case WAITING:
   case TOCENTER:
   case TOROBOT:
   case FOLLOWROBOT:
