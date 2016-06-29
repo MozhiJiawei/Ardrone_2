@@ -102,7 +102,7 @@ void *Control_loop(void *param) {
   VideoRecorder videoreader("/home/mozhi/Record/video_ts.txt",
                             "/home/mozhi/Record/video.avi");
 
-  ExternalCamera ex_cam(0.42);
+  ExternalCamera ex_cam(0.8);
   double img_time;
   ROSThread thread(imureader, videoreader, cmdreader, ex_cam, drone_NI);
   thread.showVideo = true;
@@ -174,6 +174,7 @@ void *Control_loop(void *param) {
     std::cout << robot_x << std::endl;
   }
   */
+  
   while (ros::ok()) {
     usleep(1000);
     if (videoreader.newframe) {
@@ -255,14 +256,20 @@ void *Control_loop(void *param) {
         errorx = drone_x + last_robot_x;
         errory = drone_y + last_robot_y;
         forwardb = pid.PIDXY(errorx * flying_scale, 500);
-        leftr = pid.PIDXY(errory * flying_scale, 500);
+        leftr = pid.PIDXY(errory * flying_scale, 500, false);
         CLIP3(-0.1, leftr, 0.1);
         CLIP3(-0.1, forwardb, 0.1);
         upd = 0;
         turnleftr = 0;
         if (find_rob.doesGroundCenterExist()) {
-          next_mode = WAITING;
-          pid.PIDReset();
+          pid_stable_count++;
+          if(pid_stable_count >=4) {
+            next_mode = WAITING;
+            pid.PIDReset();
+          }
+        }
+        else {
+          pid_stable_count = 0;
         }
         log << "errorx = " << errorx << " errory = " << errory << std::endl;
         log << "last_robot_x = " << last_robot_x << " last_robot_y" 
@@ -282,7 +289,6 @@ void *Control_loop(void *param) {
         CLIP3(-0.1, forwardb, 0.1);
         upd = 0;
         turnleftr = 0;
-        /*
         if (find_rob.doesRobotExist()) {
           pid_stable_count++;
           if (pid_stable_count >= 3) {
@@ -294,7 +300,6 @@ void *Control_loop(void *param) {
         else {
           pid_stable_count = 0;
         }
-        */
         
         log << "errorx = " << errorx << "  forward = " << forwardb << std::endl;
         log << "errory = " << errory << "  leftr = " << leftr << std::endl;
@@ -329,6 +334,7 @@ void *Control_loop(void *param) {
               last_robot_x = robot_x;
               last_robot_y = robot_y;
               drone_NI.Clear();
+              pid.PIDReset();
               if (abs(robot_x) > 0.8 && abs(robot_y) > 0.8) {
                 next_mode = TOCENTER;
               }
@@ -371,13 +377,14 @@ void *Control_loop(void *param) {
         errorx = drone_x + 1;
         errory = drone_y;
         forwardb = pid.PIDXY(errorx * flying_scale, 500);
-        leftr = pid.PIDXY(errory * flying_scale, 500);
+        leftr = pid.PIDXY(errory * flying_scale, 500, false);
         CLIP3(-0.1, leftr, 0.1);
         CLIP3(-0.1, forwardb, 0.1);
         upd = 0;
         turnleftr = 0;
         if (!find_rob.doesRobotExist()) {
           next_mode = TOCENTER;
+          pid.PIDReset();
         }
         //if (abs(drone_x) < 0.2 && abs(drone_y) < 0.2) {
         //  if (find_rob.doesGroundCenterExist()) {
@@ -386,6 +393,10 @@ void *Control_loop(void *param) {
         //  }
         //}
         log << "errorx = " << errorx << " errory = " << errory << std::endl;
+        log << "forwardb = " << forwardb << " leftr = " << leftr << std::endl;
+        log << "vx = " << thread.navdata.vx << " vy = " << thread.navdata.vy 
+            << std::endl;
+
         break;
       case SEARCHING:
         LogCurTime(log);
@@ -396,7 +407,7 @@ void *Control_loop(void *param) {
         drone_NI.Clear();
         robot_x = 1;
         robot_y = 1;
-        next_mode = TOROBOT;
+        next_mode = LEAVEROBOT;
         break;
       default:
         break;

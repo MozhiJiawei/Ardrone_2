@@ -15,6 +15,7 @@ ExternalCamera::ExternalCamera(double offset_y) {
   pthread_mutex_init(&mutex_, 0);
   robotexist = false;
   showing_stuff_ = 0;
+  offset_y_ = offset_y;
   setHomographyFromXML();
   Start();
 }
@@ -26,7 +27,7 @@ void ExternalCamera::getRobotPosition(double & robot_x, double & robot_y) {
   if (position_buffer_.empty()) {
     robot_x = 0;
     robot_y = 0;
-    return 
+    return; 
   }
   robot_x = position_buffer_.back().x_ - offset_y_;
   robot_y = position_buffer_.back().y_;
