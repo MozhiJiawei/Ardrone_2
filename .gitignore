@@ -7,7 +7,6 @@ install_manifest.txt
 
 *.*~
 *.swp
-*.xml
 
 /.vscode/
 /catkin/

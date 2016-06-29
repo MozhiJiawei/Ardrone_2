@@ -155,7 +155,7 @@ void *Control_loop(void *param) {
   double last_robot_x, last_robot_y;
   double drone_x, drone_y;
   double targetx = 320, targety = 120;
-  double takeoff_altitude = 1200;
+  double takeoff_altitude = 1800;
   double follow_altitude = 1800;
 
   double takeoff_time;
@@ -188,7 +188,7 @@ void *Control_loop(void *param) {
         //drone.takeOff();
         //takeoff_time = (double)ros::Time::now().toSec();
         //while ((double)ros::Time::now().toSec() < takeoff_time + 5);
-        next_mode = FOLLOWROBOT;
+        next_mode = WAITING;
         //next_mode = OdoTest;
         break;
       case WAITING:
@@ -220,6 +220,7 @@ void *Control_loop(void *param) {
                 log << "TakeOff Complete!!! Waitting Ex_Camera" << std::endl;
                 //drone_tf.SetRefPose(0, img_time);
                 if (ex_cam.isRobotExists()) {
+                  log << "RobotExists" << std::endl;
                   drone_NI.Clear();
                   next_mode = TOROBOT;
                   pid.PIDReset();
@@ -231,6 +232,7 @@ void *Control_loop(void *param) {
               //log << "Turning!!!" << std::endl << "errorturn ="  << errorturn 
               //    << " turn = " << turnleftr << std::endl;
             }
+            log << "RobotExists = " << ex_cam.isRobotExists() << std::endl;
           }
         }
         break;
@@ -279,17 +281,10 @@ void *Control_loop(void *param) {
         else {
           pid_stable_count = 0;
         }
-        /*
+        
         log << "errorx = " << errorx << "  forward = " << forwardb << std::endl;
         log << "errory = " << errory << "  leftr = " << leftr << std::endl;
-        drone_NI.Get(drone_x, drone_y);
-        errorx = drone_x - robot_x;
-        errory = drone_y - robot_y;
-        log << "errorx_NI = " << errorx << std::endl;
-        log << "errory_NI = " << errory << std::endl;
-        log << "vx = " << thread.navdata.vx << std::endl;
-        log << "vy = " << thread.navdata.vy << std::endl;
-        */
+        log << "robotx = " << robot_x << " roboty = " << robot_y << std::endl;
         break;
       case FOLLOWROBOT:
         LogCurTime(log);

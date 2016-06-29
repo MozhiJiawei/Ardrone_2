@@ -10,6 +10,8 @@
 
 #include "pthread.h"
 #include "opencv2/opencv.hpp"
+#include <cv.h>
+#include <highgui.h>
 #include <vector>
 #include <list>
 
@@ -28,7 +30,7 @@ public:
   }
 
   bool isRobotExists();
-  void getRobotPosition(int &robot_x, int &robot_y);
+  void getRobotPosition(double &robot_x, double &robot_y);
   void setHomographyFromXML();
   void FindHomography();
   bool getCurImage(cv::Mat &img);
@@ -37,9 +39,9 @@ public:
 private:
   struct RobotPosition {
   public:
-    RobotPosition(int x, int y): x_(x), y_(y) {}
-    int x_;
-    int y_;
+    RobotPosition(double x, double y): x_(x), y_(y) {}
+    double x_;
+    double y_;
   };
   std::list<RobotPosition> position_buffer_;
   std::vector<cv::Point2f> dst_points_;

@@ -13,6 +13,7 @@ ExternalCamera::ExternalCamera(double offset_y) {
   toQuit_ = false;
   threadID_ = 0;
   pthread_mutex_init(&mutex_, 0);
+  robotexist = false;
   showing_stuff_ = 0;
   setHomographyFromXML();
   Start();
@@ -21,7 +22,7 @@ bool ExternalCamera::isRobotExists() {
   return robotexist;
 }
 
-void ExternalCamera::getRobotPosition(int & robot_x, int & robot_y) {
+void ExternalCamera::getRobotPosition(double & robot_x, double & robot_y) {
   robot_x = position_buffer_.back().x_;
   robot_y = position_buffer_.back().y_ - offset_y_;
 }
@@ -56,7 +57,6 @@ void ExternalCamera::FindHomography() {
         homography_me_ = cv::findHomography(data_cb.src_point_, dst_points_);
         fs << "Homography_me" << homography_me_;
         is_enemy = true;
-        data_cb.src_point_.clear();
         continue;
       }
       else {
@@ -99,7 +99,8 @@ void ExternalCamera::ChangeShowing() {
 
 void ExternalCamera::ImageProcess() {
   IplImage img = IplImage(img_me_), *sourImg = &img, *Imgthresh;
-  Imgthresh = cvCreateImage(CvSize(sourImg->width,sourImg->height) ,8 ,1);
+  CvSize imgSize = {600, 700};
+  Imgthresh = cvCreateImage(imgSize ,8 ,1);
   int bl = 0, gr = 0, re = 0;
   unsigned char *p = (unsigned char *)sourImg->imageData;
   unsigned char *q = (unsigned char *)Imgthresh->imageData;
@@ -147,12 +148,16 @@ void ExternalCamera::ImageProcess() {
     }
     else {
       robotexist = false;
-      position_buffer_.pop_front();
+      if(!position_buffer_.empty()) {
+        position_buffer_.pop_front();
+      }
     }
   }
   else {
     robotexist = false;
-    position_buffer_.pop_front();
+    if(!position_buffer_.empty()) {
+      position_buffer_.pop_front();
+    }
   }
   cvReleaseMemStorage(&storage);
   cvReleaseImage(&Imgthresh);
@@ -162,7 +167,7 @@ void ExternalCamera::InitDstPoints(int rows, int columns) {
   double scale = 100;
   for (int y = 0; y < rows; ++y) {
     for (int x = 0; x < columns; ++x) {
-      dst_points_.push_back(cv::Point2f((x+1) * scale, (y+1) * scale));
+      dst_points_.push_back(cv::Point2f((x+1) * scale, (y+2) * scale));
     }
   }
 }
@@ -199,18 +204,19 @@ void ExternalCamera::Loop() {
   }
   //cv::namedWindow("Video", 1);
   if (homography_me_.cols != 3 || homography_enemy_.cols != 3) {
+  //if(homography_me.cols != 3) {
     cap >> camera_img_;
     FindHomography();
   }
-  ros::Rate rate(20);
+  ros::Rate rate(5);
   while (ros::ok() && !toQuit_) {
     pthread_mutex_lock(&mutex_);
     cap >> camera_img_;
     cv::warpPerspective(camera_img_, img_me_, homography_me_, 
-        cv::Size(600, 600));
+        cv::Size(600, 700));
 
     cv::warpPerspective(camera_img_, img_enemy_, homography_enemy_,
-        cv::Size(600, 600));
+        cv::Size(600, 700));
 
     pthread_mutex_unlock(&mutex_);
     ImageProcess();
