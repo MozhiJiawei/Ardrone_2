@@ -6,7 +6,7 @@
 #include "FindRob.h"
 
 //1-main switch for the following show many images for test,0-close the function
-#define TestShowImg 1
+#define TestShowImg 0
 
 //1-show robot threshold pic,0-close the function
 #define ShowRobotT 1

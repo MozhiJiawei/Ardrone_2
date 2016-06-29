@@ -23,8 +23,8 @@ bool ExternalCamera::isRobotExists() {
 }
 
 void ExternalCamera::getRobotPosition(double & robot_x, double & robot_y) {
-  robot_x = position_buffer_.back().x_;
-  robot_y = position_buffer_.back().y_ - offset_y_;
+  robot_x = position_buffer_.back().x_ - offset_y_;
+  robot_y = position_buffer_.back().y_;
 }
 
 void ExternalCamera::setHomographyFromXML() {
@@ -138,8 +138,8 @@ void ExternalCamera::ImageProcess() {
     }
     if (robR > 20) {
       robotexist = true;
-      RobotPosition rob_pos((300 - robcenter.x)*1.8 / 300, 
-          (400 - robcenter.y)*1.8 / 300);//calculate the real position
+      RobotPosition rob_pos((400 - robcenter.y)*1.8 / 300, 
+          (300 - robcenter.x)*1.8 / 300);//calculate the real position
 
       position_buffer_.push_back(rob_pos);
       if (position_buffer_.size() > 10) {
@@ -197,7 +197,7 @@ void ExternalCamera::Start() {
 }
 
 void ExternalCamera::Loop() {
-  cv::VideoCapture cap(1);
+  cv::VideoCapture cap(0);
   if(!cap.isOpened()) {
     std::cout << "Cannot Open Video." << std::endl;
     return;
