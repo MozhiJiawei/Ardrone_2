@@ -194,8 +194,12 @@ void *Control_loop(void *param) {
         //drone.takeOff();
         //takeoff_time = (double)ros::Time::now().toSec();
         //while ((double)ros::Time::now().toSec() < takeoff_time + 5);
-        next_mode = WAITING;
-        next_mode = FOLLOWROBOT;
+        if (find_rob.doesRobotExist()) {
+          next_mode = FOLLOWROBOT;
+        }
+        else if (find_rob.doesGroundCenterExist()) {
+          next_mode = WAITING;
+        }
         //next_mode = OdoTest;
         break;
       case WAITING:
@@ -226,7 +230,7 @@ void *Control_loop(void *param) {
               if (pid_stable_count >= 4) {
                 log << "TakeOff Complete!!! Waitting Ex_Camera" << std::endl;
                 //drone_tf.SetRefPose(0, img_time);
-                if (ex_cam.isRobotExists()) {
+                if (ex_cam.isRobotExists() && !ex_cam.isRobotForward()) {
                   log << "RobotExists" << std::endl;
                   drone_NI.Clear();
                   next_mode = TOROBOT;
@@ -316,23 +320,23 @@ void *Control_loop(void *param) {
           turnleftr = 0;
 
           log << "rob direction = " << find_rob.getRobDir() << std::endl;
-          if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.5) {
-            ex_cam.getRobotPosition(robot_x, robot_y);
-            last_robot_x = robot_x;
-            last_robot_y = robot_y;
-            drone_NI.Clear();
-            if (abs(robot_x) > 0.8 && abs(robot_y) > 0.8) {
-              next_mode = TOCENTER;
-            }
-            else {
-              next_mode = LEAVEROBOT;
-            }
-            log << "Yes !!! We should Leave Robot" << std::endl;
-          }
 
           if (abs(errorx) < 30 && abs(errory) < 30) {
             forwardb = 0;
             leftr = 0;
+            if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.5) {
+              ex_cam.getRobotPosition(robot_x, robot_y);
+              last_robot_x = robot_x;
+              last_robot_y = robot_y;
+              drone_NI.Clear();
+              if (abs(robot_x) > 0.8 && abs(robot_y) > 0.8) {
+                next_mode = TOCENTER;
+              }
+              else {
+                next_mode = LEAVEROBOT;
+              }
+              log << "Yes !!! We should Leave Robot" << std::endl;
+            }
           }
           else {
             /*
@@ -354,14 +358,13 @@ void *Control_loop(void *param) {
         break;
       case LEAVEROBOT:
         LogCurTime(log);
-        forwardb = -0.1;
-        leftr = 0;
-        turnleftr = 0;
-        upd = 0;
-        if (!find_rob.doesRobotExist()) {
-          next_mode = TOCENTER;
-        }
-        /*
+        //forwardb = -0.1;
+        //leftr = 0;
+        //turnleftr = 0;
+        //upd = 0;
+        //if (!find_rob.doesRobotExist()) {
+        //  next_mode = TOCENTER;
+        //}
         log << "Leaving Robot!!" << std::endl;
         //drone_tf.GetDiff(drone_x, drone_y, errorturn);
         drone_NI.Get(drone_x, drone_y);
@@ -383,7 +386,6 @@ void *Control_loop(void *param) {
         //  }
         //}
         log << "errorx = " << errorx << " errory = " << errory << std::endl;
-        */
         break;
       case SEARCHING:
         LogCurTime(log);

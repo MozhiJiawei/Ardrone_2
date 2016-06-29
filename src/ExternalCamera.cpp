@@ -23,6 +23,11 @@ bool ExternalCamera::isRobotExists() {
 }
 
 void ExternalCamera::getRobotPosition(double & robot_x, double & robot_y) {
+  if (position_buffer_.empty()) {
+    robot_x = 0;
+    robot_y = 0;
+    return 
+  }
   robot_x = position_buffer_.back().x_ - offset_y_;
   robot_y = position_buffer_.back().y_;
 }
@@ -88,6 +93,15 @@ bool ExternalCamera::getCurImage(cv::Mat &img) {
       break;
   }
   pthread_mutex_unlock(&mutex_);
+  return true;
+}
+
+bool ExternalCamera::isRobotForward() {
+  if (position_buffer_.size() >= 5) {
+    if (position_buffer_.back().x_ < position_buffer_.front().x_) {
+      return false;
+    }
+  }
   return true;
 }
 

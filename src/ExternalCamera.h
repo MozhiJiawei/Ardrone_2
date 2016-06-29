@@ -34,6 +34,7 @@ public:
   void setHomographyFromXML();
   void FindHomography();
   bool getCurImage(cv::Mat &img);
+  bool isRobotForward();
   void ChangeShowing();
 
 private:
