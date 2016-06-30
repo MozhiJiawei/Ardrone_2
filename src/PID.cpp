@@ -48,8 +48,13 @@ double PID::PIDZ(double reference, double tolerance, bool is_altd) {
     control_stuff = thread_.navdata.altd; 
     kp = 0.002;
   } else {
-    control_stuff = find_rob_.getRobRadius();
-    kp = -0.005;
+    if(find_rob_.doesGroundCenterExist()) {
+      control_stuff = find_rob_.getGroundCenterRadius();
+    }
+    else if(find_rob_.doesRobotExist()) {
+      control_stuff = find_rob_.getRobRadius();
+    }
+    kp = -0.01;
   }
 
   if (control_stuff < reference) {

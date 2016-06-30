@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
   //CvCapture* pCapture = cvCreateCameraCapture(1);
   //cvNamedWindow("Video", 1);
 
-  cv::VideoCapture cap(0);
+  cv::VideoCapture cap(1);
   if(!cap.isOpened()) {
     std::cout << "Cannot Open Camera!" << std::endl; 
     return 0;

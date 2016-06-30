@@ -103,7 +103,7 @@ void *Control_loop(void *param) {
   VideoRecorder videoreader("/home/mozhi/Record/video_ts.txt",
                             "/home/mozhi/Record/video.avi");
 
-  ExternalCamera ex_cam(0.8);
+  ExternalCamera ex_cam(0.2);
   double img_time;
   ROSThread thread(imureader, videoreader, cmdreader, ex_cam, drone_NI);
   thread.showVideo = true;
@@ -179,7 +179,9 @@ void *Control_loop(void *param) {
   /*
   while(ros::ok()) {
     ex_cam.getRobotPosition(robot_x, robot_y);
-    std::cout << robot_x << std::endl;
+    //std::cout << robot_x << std::endl;
+    //std::cout << robot_y << std::endl;
+    //ex_cam.isRobotForward();
   }
   */
   
@@ -188,6 +190,7 @@ void *Control_loop(void *param) {
     if (ex_cam.getCurImage(ex_img)) {
       cv::imshow("Ex_Video", ex_img);
     }
+    cv::waitKey(1);
     if (videoreader.newframe) {
       cur_mode = cmdreader.GetMode();
       frame_count++;
@@ -226,6 +229,7 @@ void *Control_loop(void *param) {
           forwardb = pid.PIDXY(errory, 1500);
           leftr = pid.PIDXY(errorx, 1500, false);
           upd = pid.PIDZ(takeoff_altitude, 50);
+          upd = pid.PIDZ(55, 10, false);
           CLIP3(-0.1, leftr, 0.1);
           CLIP3(-0.1, forwardb, 0.1);
           CLIP3(-0.2, upd, 0.2);
@@ -237,26 +241,24 @@ void *Control_loop(void *param) {
             CLIP3(-0.15, turnleftr, 0.15);
             if(abs(errorturn) < 0.08) {
               turnleftr = 0;
-              pid_stable_count++;
-              if (pid_stable_count >= 4) {
-                log << "TakeOff Complete!!! Waitting Ex_Camera" << std::endl;
-                //drone_tf.SetRefPose(0, img_time);
-                if (ex_cam.isRobotExists() && !ex_cam.isRobotForward()) {
-                  log << "RobotExists" << std::endl;
-                  drone_NI.Clear();
-                  next_mode = TOROBOT;
-                  pid_stable_count = 0;
-                  pid.PIDReset();
-                }
+              log << "TakeOff Complete!!! Waitting Ex_Camera" << std::endl;
+              //drone_tf.SetRefPose(0, img_time);
+              if (ex_cam.isRobotExists() && !ex_cam.isRobotForward()) {
+                log << "RobotExists" << std::endl;
+                drone_NI.Clear();
+                next_mode = TOROBOT;
+                pid.PIDReset();
               }
-            }
-            else {
-              pid_stable_count = 0;
-              //log << "Turning!!!" << std::endl << "errorturn ="  << errorturn 
-              //    << " turn = " << turnleftr << std::endl;
+              if(find_rob.doesRobotExist()) {
+                next_mode = FOLLOWROBOT;
+                pid.PIDReset();
+              }
             }
             log << "RobotExists = " << ex_cam.isRobotExists() << std::endl;
           }
+          log << "altd = " << thread.navdata.altd << std::endl;
+          log << "upd = " << upd << std::endl;
+          log << "radius = " << find_rob.getGroundCenterRadius() << std::endl;
         }
         break;
       case TOCENTER:
@@ -272,16 +274,18 @@ void *Control_loop(void *param) {
         CLIP3(-0.1, forwardb, 0.1);
         upd = 0;
         turnleftr = 0;
-        if (find_rob.doesGroundCenterExist()) {
-          pid_stable_count++;
-          if(pid_stable_count >=4) {
-            next_mode = WAITING;
-            pid_stable_count = 0;
-            pid.PIDReset();
+        if(abs(errorx) < 0.8 && abs(errory) < 0.8) {
+          if (find_rob.doesGroundCenterExist()) {
+            pid_stable_count++;
+            if(pid_stable_count >=4) {
+              next_mode = WAITING;
+              pid_stable_count = 0;
+              pid.PIDReset();
+            }
           }
+          else {
+            pid_stable_count = 0;
         }
-        else {
-          pid_stable_count = 0;
         }
         log << "errorx = " << errorx << " errory = " << errory << std::endl;
         log << "last_robot_x = " << last_robot_x << " last_robot_y" 
@@ -340,9 +344,10 @@ void *Control_loop(void *param) {
 
           log << "rob direction = " << find_rob.getRobDir() << std::endl;
           if (serving_flag) {
-            if (last_robot_dir < find_rob.getRobDir()) {
+            if (last_robot_dir > find_rob.getRobDir()) {
               serve_stable_count++;
-              if (serve_stable_count > 10) {
+              if (serve_stable_count > 20) {
+                log << "Yes!!!!" << std::endl;
                 serving_flag = false;
               }
             }
@@ -389,10 +394,13 @@ void *Control_loop(void *param) {
         CLIP3(-0.1, forwardb, 0.1);
         upd = 0;
         turnleftr = 0;
+        
         if (!find_rob.doesRobotExist()) {
           next_mode = TOCENTER;
           pid.PIDReset();
         }
+        
+        
         //log << "errorx = " << errorx << " errory = " << errory << std::endl;
         //log << "forwardb = " << forwardb << " leftr = " << leftr << std::endl;
         //log << "vx = " << thread.navdata.vx << " vy = " << thread.navdata.vy 
@@ -535,6 +543,7 @@ void *Control_loop(void *param) {
       default:
         break;
       }
+      std::cout << find_rob.isGroundEdge() << std::endl;
     }
     lostframe++;
     if (lostframe > 3000) {
@@ -558,7 +567,6 @@ void *Control_loop(void *param) {
       }
     }
     cvShowImage("Drone_Video", imgsrc);
-    cv::waitKey(1);
   }
   drone.land();
   cvReleaseImage(&imgsrc);

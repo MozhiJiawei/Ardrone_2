@@ -103,9 +103,11 @@ bool ExternalCamera::isRobotForward() {
     distance_x = position_buffer_.back().x_ - position_buffer_.front().x_;
     distance_y = position_buffer_.back().y_ - position_buffer_.front().y_;
     distance = distance_x * distance_x + distance_y * distance_y;
-    std::cout << distance << std::endl;
+    //std::cout << distance << std::endl;
     if (position_buffer_.back().x_ < position_buffer_.front().x_) {
-      return false;
+      if(distance > 0.08) {
+        return false;
+      }
     }
   }
   return true;
@@ -161,6 +163,8 @@ void ExternalCamera::ImageProcess() {
       RobotPosition rob_pos((400 - robcenter.y)*1.8 / 300, 
           (400 - robcenter.x)*1.8 / 300);//calculate the real position
 
+      rob_pos.x_ -=0.09 * (rob_pos.x_ + 4.46);
+      rob_pos.y_ *= 0.9;
       position_buffer_.push_back(rob_pos);
       if (position_buffer_.size() > 10) {
         position_buffer_.pop_front();
@@ -217,7 +221,7 @@ void ExternalCamera::Start() {
 }
 
 void ExternalCamera::Loop() {
-  cv::VideoCapture cap(0);
+  cv::VideoCapture cap(1);
   if(!cap.isOpened()) {
     std::cout << "Cannot Open Video." << std::endl;
     return;
