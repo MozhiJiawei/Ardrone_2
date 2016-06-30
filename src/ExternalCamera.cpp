@@ -99,6 +99,11 @@ bool ExternalCamera::getCurImage(cv::Mat &img) {
 
 bool ExternalCamera::isRobotForward() {
   if (position_buffer_.size() >= 5) {
+    double distance, distance_x, distance_y;
+    distance_x = position_buffer_.back().x_ - position_buffer_.front().x_;
+    distance_y = position_buffer_.back().y_ - position_buffer_.front().y_;
+    distance = distance_x * distance_x + distance_y * distance_y;
+    std::cout << distance << std::endl;
     if (position_buffer_.back().x_ < position_buffer_.front().x_) {
       return false;
     }
@@ -114,7 +119,7 @@ void ExternalCamera::ChangeShowing() {
 
 void ExternalCamera::ImageProcess() {
   IplImage img = IplImage(img_me_), *sourImg = &img, *Imgthresh;
-  CvSize imgSize = {600, 700};
+  CvSize imgSize = {800, 700};
   Imgthresh = cvCreateImage(imgSize ,8 ,1);
   int bl = 0, gr = 0, re = 0;
   unsigned char *p = (unsigned char *)sourImg->imageData;
@@ -154,7 +159,7 @@ void ExternalCamera::ImageProcess() {
     if (robR > 20) {
       robotexist = true;
       RobotPosition rob_pos((400 - robcenter.y)*1.8 / 300, 
-          (300 - robcenter.x)*1.8 / 300);//calculate the real position
+          (400 - robcenter.x)*1.8 / 300);//calculate the real position
 
       position_buffer_.push_back(rob_pos);
       if (position_buffer_.size() > 10) {
@@ -182,7 +187,7 @@ void ExternalCamera::InitDstPoints(int rows, int columns) {
   double scale = 100;
   for (int y = 0; y < rows; ++y) {
     for (int x = 0; x < columns; ++x) {
-      dst_points_.push_back(cv::Point2f((x+1) * scale, (y+2) * scale));
+      dst_points_.push_back(cv::Point2f((x+2) * scale, (y+2) * scale));
     }
   }
 }
@@ -217,9 +222,7 @@ void ExternalCamera::Loop() {
     std::cout << "Cannot Open Video." << std::endl;
     return;
   }
-  //cv::namedWindow("Video", 1);
   if (homography_me_.cols != 3 || homography_enemy_.cols != 3) {
-  //if(homography_me.cols != 3) {
     cap >> camera_img_;
     FindHomography();
   }
@@ -228,26 +231,14 @@ void ExternalCamera::Loop() {
     pthread_mutex_lock(&mutex_);
     cap >> camera_img_;
     cv::warpPerspective(camera_img_, img_me_, homography_me_, 
-        cv::Size(600, 700));
+        cv::Size(800, 700));
 
     cv::warpPerspective(camera_img_, img_enemy_, homography_enemy_,
-        cv::Size(600, 700));
+        cv::Size(800, 700));
 
     pthread_mutex_unlock(&mutex_);
     ImageProcess();
     rate.sleep();
-    //switch(showing_stuff_) {
-    //  case 0:
-    //    cv::imshow("Video", camera_img_);
-    //    break;
-    //  case 1:
-    //    cv::imshow("Video", img_me_);
-    //    break;
-    //  case 2:
-    //    cv::imshow("Video", img_enemy_);
-    //    break;
-    //}
-    //cv::waitKey(5);
   }
 }
 
