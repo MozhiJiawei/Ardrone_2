@@ -245,6 +245,7 @@ void *Control_loop(void *param) {
                   log << "RobotExists" << std::endl;
                   drone_NI.Clear();
                   next_mode = TOROBOT;
+                  pid_stable_count = 0;
                   pid.PIDReset();
                 }
               }
@@ -275,6 +276,7 @@ void *Control_loop(void *param) {
           pid_stable_count++;
           if(pid_stable_count >=4) {
             next_mode = WAITING;
+            pid_stable_count = 0;
             pid.PIDReset();
           }
         }
@@ -305,6 +307,7 @@ void *Control_loop(void *param) {
           if (pid_stable_count >= 3) {
             log << "FIND ROBOT!! Follow it!" << std::endl;
             next_mode = FOLLOWROBOT;
+            pid_stable_count = 0;
             pid.PIDReset();
           }
         }
@@ -398,12 +401,13 @@ void *Control_loop(void *param) {
         break;
       case SEARCHING:
         LogCurTime(log);
-        log << "SEARCHING" << std::endl;
+        log << "SEARCHING:  ";
         edge = find_rob.isGroundEdge();
         switch (search) {
         case Search_Start:
           log << "Start" << std::endl;
           drone_NI.Clear();
+          pid.PIDReset();
           if ((edge&Edge_Back) != 0) {
             search = Search_Forward;
           }
@@ -422,6 +426,7 @@ void *Control_loop(void *param) {
           if ((edge&Edge_Back) != 0) {
             search = Search_Forward;
             drone_NI.Clear();
+            pid.PIDReset();
           }
           break;
         case Search_Back:
@@ -440,6 +445,7 @@ void *Control_loop(void *param) {
               search = Search_Try_Left;
             }
             drone_NI.Clear();
+            pid.PIDReset();
           }
           break;
         case Search_Forward:
@@ -457,15 +463,67 @@ void *Control_loop(void *param) {
             else {
               search = Search_Try_Left;
             }
+            drone_NI.Clear();
+            pid.PIDReset();
           }
           break;
         case Search_Try_Left:
+          log << "Try Left" << std::endl;
+          search_target_x = 0;
+          search_target_y = 3;
+          drone_NI.Get(drone_x, drone_y);
+          if ((edge&Edge_Left) != 0) {
+            search = Search_Right;
+            drone_NI.Clear();
+            pid.PIDReset();
+          }
           break;
         case Search_Left:
+          log << "Left" << std::endl;
+          search_target_x = 0;
+          search_target_y = 1.5;
+          drone_NI.Get(drone_x, drone_y);
+          if (abs(drone_y - search_target_y) < 0.05) {
+            search = Search_Try_Back;
+            drone_NI.Clear();
+            pid.PIDReset();
+          }
           break;
         case Search_Right:
+          log << "Right" << std::endl;
+          search_target_x = 0;
+          search_target_y = -1.5;
+          drone_NI.Get(drone_x, drone_y);
+          if (abs(drone_y - search_target_y) < 0.05) {
+            search = Search_Try_Back;
+            drone_NI.Clear();
+            pid.PIDReset();
+          }
           break;
         }
+        drone_NI.Get(drone_x, drone_y);
+        errorx = drone_x - search_target_x;
+        errory = drone_y - search_target_y;
+        forwardb = pid.PIDXY(errorx * flying_scale, 500);
+        leftr = pid.PIDXY(errory * flying_scale, 500, false);
+        CLIP3(-0.1, leftr, 0.1);
+        CLIP3(-0.1, forwardb, 0.1);
+        upd = 0;
+        turnleftr = 0;
+        if (find_rob.doesGroundCenterExist()) {
+          pid_stable_count++;
+          if (pid_stable_count > 4) {
+            next_mode = WAITING;
+            pid_stable_count = 0;
+          }
+        }
+        else {
+          pid_stable_count = 0;
+        }
+        log << "errorx = " << errorx << " errory = " << errory << std::endl;
+        log << "targetx = " << search_target_x 
+            << " targety = " << search_target_y << std::endl;
+
         break;
       case OdoTest:
         drone_tf.SetRefPose(0, img_time);
