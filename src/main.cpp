@@ -46,6 +46,7 @@
 #include <keyboard/Key.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
+
 using namespace std;
 
 static int mGrids = 5;
@@ -155,16 +156,23 @@ void *Control_loop(void *param) {
   double last_robot_x, last_robot_y;
   double drone_x, drone_y;
   double targetx = 320, targety = 120;
-  double takeoff_altitude = 1800;
-  double follow_altitude = 1800;
-
-  double takeoff_time;
-  double searching_time;
-  int pid_stable_count = 0;
-
   double flying_scale = 300;
+  double takeoff_altitude = 1800;
 
-  double tf_errorx, tf_errory, tf_errorturn;
+  int pid_stable_count = 0;
+  int serve_stable_count = 0;
+  const int Edge_Forward = 8, Edge_Back = 4, Edge_Left = 2, Edge_Right = 1;
+
+  bool serving_flag = false;
+  double search_target_x, search_target_y;
+  double last_robot_dir = 0;
+
+  enum SearchState { Search_Try_Back, Search_Try_Left, Search_Forward, 
+      Search_Back, Search_Left, Search_Right, Search_Start};
+
+  SearchState search = Search_Start;
+  int edge;
+
   cvNamedWindow("Drone_Video", 1);
   cv::namedWindow("Ex_Video");
   cvMoveWindow("Drone_Video", 600, 350);
@@ -177,6 +185,9 @@ void *Control_loop(void *param) {
   
   while (ros::ok()) {
     usleep(1000);
+    if (ex_cam.getCurImage(ex_img)) {
+      cv::imshow("Ex_Video", ex_img);
+    }
     if (videoreader.newframe) {
       cur_mode = cmdreader.GetMode();
       frame_count++;
@@ -192,14 +203,13 @@ void *Control_loop(void *param) {
         LogCurTime(log);
         log << "START!!! TAKEOFF NOW" << std::endl;
         drone.hover();
-        //drone.takeOff();
-        //takeoff_time = (double)ros::Time::now().toSec();
-        //while ((double)ros::Time::now().toSec() < takeoff_time + 5);
         if (find_rob.doesRobotExist()) {
           next_mode = FOLLOWROBOT;
+          serving_flag = true;
         }
         else if (find_rob.doesGroundCenterExist()) {
           next_mode = WAITING;
+          serving_flag = false;
         }
         //next_mode = OdoTest;
         break;
@@ -278,6 +288,7 @@ void *Control_loop(void *param) {
         break;
       case TOROBOT:
         LogCurTime(log);
+        log << "TOROBOT" << std::endl;
         //drone_tf.GetDiff(drone_x, drone_y, errorturn);
         drone_NI.Get(drone_x, drone_y);
         ex_cam.getRobotPosition(robot_x, robot_y);
@@ -325,11 +336,25 @@ void *Control_loop(void *param) {
           turnleftr = 0;
 
           log << "rob direction = " << find_rob.getRobDir() << std::endl;
+          if (serving_flag) {
+            if (last_robot_dir < find_rob.getRobDir()) {
+              serve_stable_count++;
+              if (serve_stable_count > 10) {
+                serving_flag = false;
+              }
+            }
+            else {
+              serve_stable_count = 0;
+            }
+            last_robot_dir = find_rob.getRobDir();
+          }
 
           if (abs(errorx) < 30 && abs(errory) < 30) {
             forwardb = 0;
             leftr = 0;
-            if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.5) {
+            if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.5 
+                && !serving_flag) {
+
               ex_cam.getRobotPosition(robot_x, robot_y);
               last_robot_x = robot_x;
               last_robot_y = robot_y;
@@ -344,35 +369,14 @@ void *Control_loop(void *param) {
               log << "Yes !!! We should Leave Robot" << std::endl;
             }
           }
-          else {
-            /*
-               log << "PID to CENTER" << std::endl;
-               log << "errorx = " << errorx << " errory = " << errory << std::endl
-               << "forward = " << forwardb << " leftr = " << leftr << std::endl;
-
-               log << "altd = " << thread.navdata.altd << std::endl;
-               log << "RobRadius = " << find_rob.getRobRadius() << std::endl;
-               log << "upd = " << upd << std::endl;
-               */
-          }
         } else {
-          //forwardb = 0;
-          //leftr = 0;
           upd = 0;
           log << "Cannot Find Robot." << std::endl;
         }
         break;
       case LEAVEROBOT:
         LogCurTime(log);
-        //forwardb = -0.1;
-        //leftr = 0;
-        //turnleftr = 0;
-        //upd = 0;
-        //if (!find_rob.doesRobotExist()) {
-        //  next_mode = TOCENTER;
-        //}
         log << "Leaving Robot!!" << std::endl;
-        //drone_tf.GetDiff(drone_x, drone_y, errorturn);
         drone_NI.Get(drone_x, drone_y);
         errorx = drone_x + 1;
         errory = drone_y;
@@ -386,21 +390,82 @@ void *Control_loop(void *param) {
           next_mode = TOCENTER;
           pid.PIDReset();
         }
-        //if (abs(drone_x) < 0.2 && abs(drone_y) < 0.2) {
-        //  if (find_rob.doesGroundCenterExist()) {
-        //    next_mode = WAITING;
-        //    pid.PIDReset();
-        //  }
-        //}
-        log << "errorx = " << errorx << " errory = " << errory << std::endl;
-        log << "forwardb = " << forwardb << " leftr = " << leftr << std::endl;
-        log << "vx = " << thread.navdata.vx << " vy = " << thread.navdata.vy 
-            << std::endl;
+        //log << "errorx = " << errorx << " errory = " << errory << std::endl;
+        //log << "forwardb = " << forwardb << " leftr = " << leftr << std::endl;
+        //log << "vx = " << thread.navdata.vx << " vy = " << thread.navdata.vy 
+        //    << std::endl;
 
         break;
       case SEARCHING:
         LogCurTime(log);
-        log << "SEARCHING";
+        log << "SEARCHING" << std::endl;
+        edge = find_rob.isGroundEdge();
+        switch (search) {
+        case Search_Start:
+          log << "Start" << std::endl;
+          drone_NI.Clear();
+          if ((edge&Edge_Back) != 0) {
+            search = Search_Forward;
+          }
+          else if ((edge&Edge_Forward) != 0) {
+            search = Search_Back;
+          }
+          else {
+            search = Search_Try_Back;
+          }
+          break;
+        case Search_Try_Back:
+          log << "Try_Back" << std::endl;
+          search_target_x = -3;
+          search_target_y = 0;
+          drone_NI.Get(drone_x, drone_y);
+          if ((edge&Edge_Back) != 0) {
+            search = Search_Forward;
+            drone_NI.Clear();
+          }
+          break;
+        case Search_Back:
+          log << "back" << std::endl;
+          search_target_x = -1.5;
+          search_target_y = 0;
+          drone_NI.Get(drone_x, drone_y);
+          if (abs(drone_x - search_target_x) < 0.05) {
+            if ((edge&Edge_Left) != 0) {
+              search = Search_Right;
+            }
+            else if ((edge&Edge_Right) != 0) {
+              search = Search_Left;
+            }
+            else {
+              search = Search_Try_Left;
+            }
+            drone_NI.Clear();
+          }
+          break;
+        case Search_Forward:
+          log << "forward" << std::endl;
+          search_target_x = 1.5;
+          search_target_y = 0;
+          drone_NI.Get(drone_x, drone_y);
+          if (abs(drone_x - search_target_x) < 0.05) {
+            if ((edge&Edge_Left) != 0) {
+              search = Search_Right;
+            }
+            else if ((edge&Edge_Right) != 0) {
+              search = Search_Left;
+            }
+            else {
+              search = Search_Try_Left;
+            }
+          }
+          break;
+        case Search_Try_Left:
+          break;
+        case Search_Left:
+          break;
+        case Search_Right:
+          break;
+        }
         break;
       case OdoTest:
         drone_tf.SetRefPose(0, img_time);
@@ -434,13 +499,10 @@ void *Control_loop(void *param) {
         drone.hover();
       }
     }
-    if (ex_cam.getCurImage(ex_img)) {
-      cv::imshow("Ex_Video", ex_img);
-    }
     cvShowImage("Drone_Video", imgsrc);
     cv::waitKey(1);
   }
- drone.land();
+  drone.land();
   cvReleaseImage(&imgsrc);
   return 0;
 }
