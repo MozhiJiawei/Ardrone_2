@@ -155,16 +155,15 @@ void *Control_loop(void *param) {
   double last_robot_x, last_robot_y;
   double drone_x, drone_y;
   double targetx = 320, targety = 120;
-  double takeoff_altitude = 1800;
-  double follow_altitude = 1800;
-
-  double takeoff_time;
-  double searching_time;
-  int pid_stable_count = 0;
-
   double flying_scale = 300;
+  double takeoff_altitude = 1800;
 
-  double tf_errorx, tf_errory, tf_errorturn;
+  int pid_stable_count = 0;
+  int serve_stable_count = 0;
+
+  bool serving_flag = false;
+  double last_robot_dir = 0;
+
   cvNamedWindow("Drone_Video", 1);
   cv::namedWindow("Ex_Video");
   cvMoveWindow("Drone_Video", 600, 350);
@@ -177,6 +176,9 @@ void *Control_loop(void *param) {
   
   while (ros::ok()) {
     usleep(1000);
+    if (ex_cam.getCurImage(ex_img)) {
+      cv::imshow("Ex_Video", ex_img);
+    }
     if (videoreader.newframe) {
       cur_mode = cmdreader.GetMode();
       frame_count++;
@@ -192,14 +194,13 @@ void *Control_loop(void *param) {
         LogCurTime(log);
         log << "START!!! TAKEOFF NOW" << std::endl;
         drone.hover();
-        //drone.takeOff();
-        //takeoff_time = (double)ros::Time::now().toSec();
-        //while ((double)ros::Time::now().toSec() < takeoff_time + 5);
         if (find_rob.doesRobotExist()) {
           next_mode = FOLLOWROBOT;
+          serving_flag = true;
         }
         else if (find_rob.doesGroundCenterExist()) {
           next_mode = WAITING;
+          serving_flag = false;
         }
         //next_mode = OdoTest;
         break;
@@ -235,6 +236,7 @@ void *Control_loop(void *param) {
                   log << "RobotExists" << std::endl;
                   drone_NI.Clear();
                   next_mode = TOROBOT;
+                  pid_stable_count = 0;
                   pid.PIDReset();
                 }
               }
@@ -265,6 +267,7 @@ void *Control_loop(void *param) {
           pid_stable_count++;
           if(pid_stable_count >=4) {
             next_mode = WAITING;
+            pid_stable_count = 0;
             pid.PIDReset();
           }
         }
@@ -278,6 +281,7 @@ void *Control_loop(void *param) {
         break;
       case TOROBOT:
         LogCurTime(log);
+        log << "TOROBOT" << std::endl;
         //drone_tf.GetDiff(drone_x, drone_y, errorturn);
         drone_NI.Get(drone_x, drone_y);
         ex_cam.getRobotPosition(robot_x, robot_y);
@@ -294,6 +298,7 @@ void *Control_loop(void *param) {
           if (pid_stable_count >= 3) {
             log << "FIND ROBOT!! Follow it!" << std::endl;
             next_mode = FOLLOWROBOT;
+            pid_stable_count = 0;
             pid.PIDReset();
           }
         }
@@ -325,11 +330,25 @@ void *Control_loop(void *param) {
           turnleftr = 0;
 
           log << "rob direction = " << find_rob.getRobDir() << std::endl;
+          if (serving_flag) {
+            if (last_robot_dir < find_rob.getRobDir()) {
+              serve_stable_count++;
+              if (serve_stable_count > 10) {
+                serving_flag = false;
+              }
+            }
+            else {
+              serve_stable_count = 0;
+            }
+            last_robot_dir = find_rob.getRobDir();
+          }
 
           if (abs(errorx) < 30 && abs(errory) < 30) {
             forwardb = 0;
             leftr = 0;
-            if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.5) {
+            if (find_rob.getRobDir() > 0.2 && find_rob.getRobDir() < 1.5 
+                && !serving_flag) {
+
               ex_cam.getRobotPosition(robot_x, robot_y);
               last_robot_x = robot_x;
               last_robot_y = robot_y;
@@ -344,35 +363,14 @@ void *Control_loop(void *param) {
               log << "Yes !!! We should Leave Robot" << std::endl;
             }
           }
-          else {
-            /*
-               log << "PID to CENTER" << std::endl;
-               log << "errorx = " << errorx << " errory = " << errory << std::endl
-               << "forward = " << forwardb << " leftr = " << leftr << std::endl;
-
-               log << "altd = " << thread.navdata.altd << std::endl;
-               log << "RobRadius = " << find_rob.getRobRadius() << std::endl;
-               log << "upd = " << upd << std::endl;
-               */
-          }
         } else {
-          //forwardb = 0;
-          //leftr = 0;
           upd = 0;
           log << "Cannot Find Robot." << std::endl;
         }
         break;
       case LEAVEROBOT:
         LogCurTime(log);
-        //forwardb = -0.1;
-        //leftr = 0;
-        //turnleftr = 0;
-        //upd = 0;
-        //if (!find_rob.doesRobotExist()) {
-        //  next_mode = TOCENTER;
-        //}
         log << "Leaving Robot!!" << std::endl;
-        //drone_tf.GetDiff(drone_x, drone_y, errorturn);
         drone_NI.Get(drone_x, drone_y);
         errorx = drone_x + 1;
         errory = drone_y;
@@ -386,21 +384,14 @@ void *Control_loop(void *param) {
           next_mode = TOCENTER;
           pid.PIDReset();
         }
-        //if (abs(drone_x) < 0.2 && abs(drone_y) < 0.2) {
-        //  if (find_rob.doesGroundCenterExist()) {
-        //    next_mode = WAITING;
-        //    pid.PIDReset();
-        //  }
-        //}
-        log << "errorx = " << errorx << " errory = " << errory << std::endl;
-        log << "forwardb = " << forwardb << " leftr = " << leftr << std::endl;
-        log << "vx = " << thread.navdata.vx << " vy = " << thread.navdata.vy 
-            << std::endl;
+        //log << "errorx = " << errorx << " errory = " << errory << std::endl;
+        //log << "forwardb = " << forwardb << " leftr = " << leftr << std::endl;
+        //log << "vx = " << thread.navdata.vx << " vy = " << thread.navdata.vy 
+        //    << std::endl;
 
         break;
       case SEARCHING:
         LogCurTime(log);
-        log << "SEARCHING";
         break;
       case OdoTest:
         drone_tf.SetRefPose(0, img_time);
@@ -434,13 +425,10 @@ void *Control_loop(void *param) {
         drone.hover();
       }
     }
-    if (ex_cam.getCurImage(ex_img)) {
-      cv::imshow("Ex_Video", ex_img);
-    }
     cvShowImage("Drone_Video", imgsrc);
     cv::waitKey(1);
   }
- drone.land();
+  drone.land();
   cvReleaseImage(&imgsrc);
   return 0;
 }
