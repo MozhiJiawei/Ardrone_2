@@ -23,7 +23,7 @@ public:
 
   ~PID() {}
   double PIDXY(double error, double v_max, bool is_X = true);
-  double PIDZ(double altitude, double tolerance, bool is_altd = true);
+  double PIDZ(double altitude, double tolerance, bool is_robot = true);
   void PIDReset();
 private:
   ROSThread &thread_;

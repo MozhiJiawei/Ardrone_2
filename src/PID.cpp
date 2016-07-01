@@ -41,20 +41,14 @@ double PID::PIDXY(double error, double v_max, bool is_X) {
 }
 
 
-double PID::PIDZ(double reference, double tolerance, bool is_altd) {
+double PID::PIDZ(double reference, double tolerance, bool is_robot) {
   double upd, control_stuff;
-  double kp;
-  if(is_altd) {
-    control_stuff = thread_.navdata.altd; 
-    kp = 0.002;
-  } else {
-    if(find_rob_.doesGroundCenterExist()) {
-      control_stuff = find_rob_.getGroundCenterRadius();
-    }
-    else if(find_rob_.doesRobotExist()) {
-      control_stuff = find_rob_.getRobRadius();
-    }
-    kp = -0.01;
+  double kp = -0.01;
+  if(is_robot) {
+    control_stuff = find_rob_.getRobRadius();
+  }
+  else {
+    control_stuff = find_rob_.getGroundCenterRadius();
   }
 
   if (control_stuff < reference) {
