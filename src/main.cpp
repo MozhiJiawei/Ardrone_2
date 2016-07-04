@@ -54,6 +54,15 @@ static int mGrids = 5;
 static int nGrids = 6;
 static int setcamera = 0;
 
+int sgn(double input) {
+  if (input >= 0) {
+    return 1;
+  }
+  else {
+    return -1;
+  }
+}
+
 void writeFeatPts(const vector<cv::Point2f> &featPts, const char *filePath) {
   ofstream file(filePath);
   if (!file)
@@ -155,6 +164,7 @@ void *Control_loop(void *param) {
   ///////////////////////////////////////////////////////////
   double robot_x = 0, robot_y = 0;
   double last_robot_x, last_robot_y;
+  double leave_robot_x, leave_robot_y;
   double drone_x, drone_y;
   double targetx = 320, targety = 120;
   double flying_scale = 300;
@@ -162,6 +172,7 @@ void *Control_loop(void *param) {
 
   int pid_stable_count = 0;
   int serve_stable_count = 0;
+  int lose_robot_count = 0;
   const int Edge_Forward = 8, Edge_Back = 4, Edge_Left = 2, Edge_Right = 1;
 
   bool robot_exist = true;
@@ -309,7 +320,7 @@ void *Control_loop(void *param) {
         if(abs(errorx) < 0.8 && abs(errory) < 0.8) {
           if (find_rob.doesGroundCenterExist()) {
             pid_stable_count++;
-            if(pid_stable_count >=4) {
+            if(pid_stable_count >=3) {
               next_mode = WAITING;
               robot_exist = true;
               pid_stable_count = 0;
@@ -318,7 +329,7 @@ void *Control_loop(void *param) {
           }
           else {
             pid_stable_count = 0;
-        }
+          }
         }
         log << "errorx = " << errorx << " errory = " << errory << std::endl;
         log << "last_robot_x = " << last_robot_x << " last_robot_y" 
@@ -406,22 +417,32 @@ void *Control_loop(void *param) {
                 next_mode = TOCENTER;
               }
               else {
+                leave_robot_x = -sgn(robot_x);
+                leave_robot_y = -sgn(robot_y);
                 next_mode = LEAVEROBOT;
               }
               log << "Yes !!! We should Leave Robot" << std::endl;
             }
           }
-        } else {
+          lose_robot_count = 0;
+        } 
+        else {
+          lose_robot_count++;
           upd = 0;
-          log << "Cannot Find Robot." << std::endl;
+          if (lose_robot_count >= 4) {
+            next_mode = TOROBOT;
+          }
         }
         break;
       case LEAVEROBOT:
         LogCurTime(log);
         log << "Leaving Robot!!" << std::endl;
+        log << "Leaving x = " << leave_robot_x << " y = " 
+            << leave_robot_y << std::endl;
+
         drone_NI.Get(drone_x, drone_y);
-        errorx = drone_x + 1;
-        errory = drone_y;
+        errorx = drone_x - leave_robot_x;
+        errory = drone_y - leave_robot_y;
         forwardb = pid.PIDXY(errorx * flying_scale, 500);
         leftr = pid.PIDXY(errory * flying_scale, 500, false);
         CLIP3(-0.1, leftr, 0.1);

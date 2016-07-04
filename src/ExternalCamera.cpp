@@ -20,6 +20,11 @@ ExternalCamera::ExternalCamera(double offset_y) {
   Start();
 }
 bool ExternalCamera::isRobotExists() {
+  if (!position_buffer_.empty()) {
+    if (position_buffer_.back().x_ > 1.7) {
+      return false;
+    }
+  }
   return robotexist;
 }
 
