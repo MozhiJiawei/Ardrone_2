@@ -213,7 +213,7 @@ void *Control_loop(void *param) {
         drone.hover();
         if (find_rob.doesRobotExist()) {
           next_mode = FOLLOWROBOT;
-          random_angle = double(ran() % 18) / 10;
+          random_angle = double(random() % 18) / 10;
           serving_flag = true;
         }
         else if (find_rob.doesGroundCenterExist()) {
@@ -235,7 +235,7 @@ void *Control_loop(void *param) {
           errorx = centerx - targetx;
           forwardb = pid.PIDXY(errory, 1500);
           leftr = pid.PIDXY(errorx, 1500, false);
-          upd = pid.PIDZ(55, 10);
+          upd = pid.PIDZ(55, 10, false);
           CLIP3(-0.1, leftr, 0.1);
           CLIP3(-0.1, forwardb, 0.1);
           CLIP3(-0.2, upd, 0.2);
@@ -256,7 +256,7 @@ void *Control_loop(void *param) {
               }
               if(find_rob.doesRobotExist()) {
                 next_mode = FOLLOWROBOT;
-                random_angle = double(ran() % 18) / 10;
+                random_angle = double(random() % 18) / 10;
                 pid.PIDReset();
               }
               if(!robot_exist) {
@@ -268,6 +268,9 @@ void *Control_loop(void *param) {
                   pid.PIDReset();
                 }
               }
+            }
+            else {
+              log << "turning" << std::endl;
             }
           }
           
@@ -284,6 +287,7 @@ void *Control_loop(void *param) {
               pid_stable_count = 0;
             }
           }
+          log << "LastExists = " << robot_exist << std::endl;
           log << "RobotExists = " << ex_cam.isRobotExists() << std::endl;
           log << "altd = " << thread.navdata.altd << std::endl;
           log << "upd = " << upd << std::endl;
@@ -339,7 +343,7 @@ void *Control_loop(void *param) {
           if (pid_stable_count >= 3) {
             log << "FIND ROBOT!! Follow it!" << std::endl;
             next_mode = FOLLOWROBOT;
-            random_angle = double(ran() % 18) / 10;
+            random_angle = double(random() % 18) / 10;
             pid_stable_count = 0;
             pid.PIDReset();
           }
@@ -365,7 +369,7 @@ void *Control_loop(void *param) {
           errorx = centerx - targetx;
           forwardb = pid.PIDXY(errory, 800);
           leftr = pid.PIDXY(errorx, 800, false);
-          upd = pid.PIDZ(70, 10, false);
+          upd = pid.PIDZ(70, 10);
           CLIP3(-0.1, leftr, 0.1);
           CLIP3(-0.1, forwardb, 0.1);
           CLIP3(-0.2, upd, 0.2);
@@ -391,7 +395,7 @@ void *Control_loop(void *param) {
             forwardb = 0;
             leftr = 0;
             if (find_rob.getRobDir() > 0.5 && 
-                find_rob.getRobDir() < 2.5 - random_angle && !serving_flag) {
+                find_rob.getRobDir() < (2.5 - random_angle) && !serving_flag) {
 
               ex_cam.getRobotPosition(robot_x, robot_y);
               last_robot_x = robot_x;
@@ -429,6 +433,7 @@ void *Control_loop(void *param) {
           next_mode = TOCENTER;
           pid.PIDReset();
         }
+        
         break;
       case SEARCHING:
         LogCurTime(log);
