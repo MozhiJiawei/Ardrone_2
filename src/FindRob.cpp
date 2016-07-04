@@ -424,6 +424,8 @@ void FindRob::AnalyzeGround(IplImage *src)
 void FindRob::FindGroundCenter(IplImage *src)
 {
   if(FlagFindGrCenter != 0) return;
+  if(FlagAnaGrou == 0)
+    AnalyzeGround(ImgForYellow);
 
   if(FlagAnaGrou == 0)
     AnalyzeGround(ImgForYellow);
@@ -521,9 +523,7 @@ double FindRob::getGroundDir()
 
 //for blue
 CvPoint FindRob::getGroundCenter()
-{
-  if(FlagAnaGrou == 0)
-    AnalyzeGround(ImgForYellow);
+{  
   if(FlagFindGrCenter == 0)
     FindGroundCenter(ImgForBlue);
 
