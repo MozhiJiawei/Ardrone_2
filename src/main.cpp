@@ -2,7 +2,7 @@
 /*
  * main.cpp
  *
- *  Created on: May 14, 2015
+ *  Created on: May 14, 2016
  *      Author: ljw
  */
 
@@ -49,6 +49,10 @@
 #include <tf/transform_broadcaster.h>
 
 using namespace std;
+
+#define Old_Search 1
+#define Odo_Test 0
+#define Ex_Cam_Setup 0
 
 static int mGrids = 5;
 static int nGrids = 6;
@@ -172,7 +176,8 @@ void *Control_loop(void *param) {
 
   int pid_stable_count = 0;
   int serve_stable_count = 0;
-  int lose_robot_count = 0;
+  int lose_count = 0;
+  double searching_time = 0;
   const int Edge_Forward = 8, Edge_Back = 4, Edge_Left = 2, Edge_Right = 1;
 
   bool robot_exist = true;
@@ -192,14 +197,14 @@ void *Control_loop(void *param) {
   cv::namedWindow("Ex_Video");
   cvMoveWindow("Drone_Video", 600, 350);
   srand(time(NULL));
-  /*
+#if Ex_Cam_Setup
   while(ros::ok()) {
     ex_cam.getRobotPosition(robot_x, robot_y);
-    //std::cout << robot_x << std::endl;
-    //std::cout << robot_y << std::endl;
+    std::cout << robot_x << std::endl;
+    std::cout << robot_y << std::endl;
     //ex_cam.isRobotForward();
   }
-  */
+#endif 
   
   while (ros::ok()) {
     usleep(1000);
@@ -232,7 +237,9 @@ void *Control_loop(void *param) {
           robot_exist = true;
           serving_flag = false;
         }
-        //next_mode = OdoTest;
+#if Odo_Test
+        next_mode = OdoTest;
+#endif
         break;
       case WAITING:
         LogCurTime(log);
@@ -303,6 +310,14 @@ void *Control_loop(void *param) {
           log << "altd = " << thread.navdata.altd << std::endl;
           log << "upd = " << upd << std::endl;
           log << "radius = " << find_rob.getGroundCenterRadius() << std::endl;
+          lose_count = 0;
+        }
+        else {
+          lose_count++;
+          upd = 0;
+          if (lose_count >= 4) {
+            next_mode = SEARCHING;
+          }
         }
         break;
       case TOCENTER:
@@ -424,12 +439,12 @@ void *Control_loop(void *param) {
               log << "Yes !!! We should Leave Robot" << std::endl;
             }
           }
-          lose_robot_count = 0;
+          lose_count = 0;
         } 
         else {
-          lose_robot_count++;
+          lose_count++;
           upd = 0;
-          if (lose_robot_count >= 4) {
+          if (lose_count >= 4) {
             next_mode = TOROBOT;
           }
         }
@@ -449,14 +464,104 @@ void *Control_loop(void *param) {
         CLIP3(-0.1, forwardb, 0.1);
         upd = 0;
         turnleftr = 0;
-        
+#if Odo_Test
+#else
         if (!find_rob.doesRobotExist()) {
           next_mode = TOCENTER;
           pid.PIDReset();
         }
-        
+#endif
         break;
       case SEARCHING:
+#if Old_Search
+        LogCurTime(log);
+        if (find_rob.doesGroundCenterExist()) {
+          log << "Searched now Waiting" << endl;
+          next_mode = WAITING;
+        }
+        else {
+          log << "SEARCHING Center!!" << std::endl;
+          if ((double)ros::Time::now().toSec() <
+              searching_time + 1 * searching_scale) {
+
+            log << "back" << endl;
+            forwardb = -0.1;
+            leftr = 0;
+            turnleftr = 0;
+            upd = 0;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 1.5 * searching_scale) {
+
+            forwardb = 0;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 2.5 * searching_scale) {
+
+            log << "back" << endl;
+            forwardb = -0.1;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 3 * searching_scale) {
+
+            forwardb = 0;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 4 * searching_scale) {
+
+            log << "forward" << endl;
+            forwardb = 0.1;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 4.5 * searching_scale) {
+
+            forwardb = 0;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 5.5 * searching_scale) {
+
+            log << "forward" << endl;
+            forwardb = 0.1;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 6 * searching_scale) {
+
+            forwardb = 0;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 7 * searching_scale) {
+
+            log << "forward" << endl;
+            forwardb = 0.1;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 7.5 * searching_scale) {
+
+            forwardb = 0;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 8.5 * searching_scale) {
+
+            log << "forward" << endl;
+            forwardb = 0.1;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 9 * searching_scale) {
+
+            forwardb = 0;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 9.5 * searching_scale) {
+
+            log << "back" << endl;
+            forwardb = -0.1;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 10.5 * searching_scale) {
+
+            forwardb = 0;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 11 * searching_scale) {
+
+            log << "back" << endl;
+            forwardb = -0.1;
+          } else if ((double)ros::Time::now().toSec() <
+                     searching_time + 12 * searching_scale) {
+
+            forwardb = 0;
+          } else {
+            searching_time = (double)ros::Time::now().toSec();
+            searching_scale++;
+          }
+        }
+#else
         LogCurTime(log);
         log << "SEARCHING:  ";
         edge = find_rob.isGroundEdge();
@@ -583,11 +688,12 @@ void *Control_loop(void *param) {
             << " targety = " << search_target_y << std::endl;
 
         break;
+#endif
       case OdoTest:
         drone_tf.SetRefPose(0, img_time);
         drone_NI.Clear();
-        robot_x = 1;
-        robot_y = 1;
+        leave_robot_x = -1;
+        leave_robot_y = -1.5;
         next_mode = LEAVEROBOT;
         break;
       default:
