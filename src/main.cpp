@@ -177,7 +177,8 @@ void *Control_loop(void *param) {
   int pid_stable_count = 0;
   int serve_stable_count = 0;
   int lose_count = 0;
-  double searching_time = 0;
+  double searching_time;
+  double searching_scale;
   const int Edge_Forward = 8, Edge_Back = 4, Edge_Left = 2, Edge_Right = 1;
 
   bool robot_exist = true;
@@ -316,6 +317,8 @@ void *Control_loop(void *param) {
           lose_count++;
           upd = 0;
           if (lose_count >= 4) {
+            searching_scale = 1;
+            searching_time = (double)ros::Time::now().toSec();
             next_mode = SEARCHING;
           }
         }
