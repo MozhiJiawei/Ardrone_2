@@ -87,7 +87,7 @@ void FindRob::ReInit(IplImage *img)
         */
           q[i*ImgForRob->nChannels+(j)*ImgForRob->widthStep]=0;
 
-      if((c-a)>0 && (b-a)>0)//for yellow
+      if((c-a)>10 && (b-a)>10)//for yellow
       {
         if((a+b+c)<50)
           r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=0;
@@ -97,7 +97,7 @@ void FindRob::ReInit(IplImage *img)
       else
         r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=0;
 
-      if(b<20 && c<20 && a>50)//for blue
+      if(b<20 && c<20 && a>40)//for blue,
       {          
         s[i*ImgForBlue->nChannels+(j)*ImgForBlue->widthStep]=255;          
       }
@@ -311,7 +311,7 @@ void FindRob::AnalyzeGround(IplImage *src)
   for(tempcont = contour; tempcont!=NULL; tempcont = tempcont->h_next)
   {
     recttemp = cvBoundingRect(tempcont, 0);
-    if (recttemp.width > 20 || recttemp.height > 20)  
+    if (recttemp.width > 30 || recttemp.height > 30)  
     {
       tempx = recttemp.x;
       if(tempx < minX)
@@ -455,9 +455,12 @@ void FindRob::FindGroundCenter(IplImage *src)
     while(tempcont != NULL)
     {
       cvMinEnclosingCircle( tempcont, &tempCenter, &tempR);
-      if(tempR > RobRadius)
+      if(tempR > RobRadius && tempR < 160)
       { 
-        if(edge==0 || (edge!=0 && tempCenter.x>(minX+100) && tempCenter.x<(maxX-100) && tempCenter.y>(minY+100) && tempCenter.y<(maxY-100)))
+        //
+        if(edge==0 || (edge!=0 && (
+          ((2*tempR*tempR)< fabs( cvContourArea(tempcont)))
+          || (tempCenter.x>(minX+100) && tempCenter.x<(maxX-100) && tempCenter.y>(minY+100) && tempCenter.y<(maxY-100)))))
         {
         RobCenter = tempCenter;
         RobRadius = tempR;
@@ -467,22 +470,24 @@ void FindRob::FindGroundCenter(IplImage *src)
 
       if(tempR > 20)//judge whether the blue is edge
       {
-        if((8 & isEdge) && tempCenter.y<(minY+100))
+        if((8 == isEdge))
         {
-          isEdgeConfirm += 8;
+          if(isEdgeConfirm == 0 && tempCenter.y<(minY+100)) isEdgeConfirm += 8;
         }
-        if((4 & isEdge) && tempCenter.y>(maxY-100))
+        else if((4 == isEdge))
         {
-          isEdgeConfirm += 4;
+          if(isEdgeConfirm == 0 && tempCenter.y>(maxY-100)) isEdgeConfirm += 4;
         }
-        if((2 & isEdge) && tempCenter.x<(minX+100))
+        else if((2 == isEdge))
         {
-          isEdgeConfirm += 2;
+          if(isEdgeConfirm == 0 && tempCenter.x<(minX+100)) isEdgeConfirm += 2;
         }
-        if((1 & isEdge) && tempCenter.x>(maxX-100))
+        else if((1 == isEdge))
         {
-          isEdgeConfirm += 1;
+          if(isEdgeConfirm == 0 && tempCenter.x>(maxX-100)) isEdgeConfirm += 1;
         }
+        else
+          isEdgeConfirm = isEdge;
       }
       tempcont = tempcont->h_next;
     }
