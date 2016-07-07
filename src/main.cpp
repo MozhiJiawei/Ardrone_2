@@ -229,11 +229,13 @@ void *Control_loop(void *param) {
         log << "START!!! TAKEOFF NOW" << std::endl;
         drone.hover();
         if (find_rob.doesRobotExist()) {
+          log << "Serve!!!" << std::endl;
           next_mode = FOLLOWROBOT;
           random_angle = double(random() % 18) / 10;
           serving_flag = true;
         }
         else if (find_rob.doesGroundCenterExist()) {
+          log << "Wait for the ball" << std::endl;
           next_mode = WAITING;
           robot_exist = true;
           serving_flag = false;
@@ -246,6 +248,7 @@ void *Control_loop(void *param) {
         LogCurTime(log);
         log << "WAITING!!" << std::endl;
         if (find_rob.doesGroundCenterExist()) {
+          log << "Center Exist!!!" << std::endl;
           centerx = find_rob.getGroundCenter().x;
           centery = find_rob.getGroundCenter().y;
           CLIP3(10.0, centerx, 590.0);
@@ -268,12 +271,13 @@ void *Control_loop(void *param) {
               turnleftr = 0;
               log << "TakeOff Complete!!! Waitting Ex_Camera" << std::endl;
               if (ex_cam.isRobotExists() && !ex_cam.isRobotForward()) {
-                log << "RobotExists" << std::endl;
+                log << "RobotExists!! TOROBOT" << std::endl;
                 drone_NI.Clear();
                 next_mode = TOROBOT;
                 pid.PIDReset();
               }
               if(find_rob.doesRobotExist()) {
+                log << "Robot Coming by!! FOLLOWROBOT" << std::endl;
                 next_mode = FOLLOWROBOT;
                 random_angle = double(random() % 18) / 10;
                 pid.PIDReset();
@@ -308,7 +312,6 @@ void *Control_loop(void *param) {
           }
           log << "LastExists = " << robot_exist << std::endl;
           log << "RobotExists = " << ex_cam.isRobotExists() << std::endl;
-          log << "altd = " << thread.navdata.altd << std::endl;
           log << "upd = " << upd << std::endl;
           log << "radius = " << find_rob.getGroundCenterRadius() << std::endl;
           lose_count = 0;
@@ -316,9 +319,11 @@ void *Control_loop(void *param) {
         else {
           lose_count++;
           upd = 0;
-          if (lose_count >= 4) {
+          if (lose_count >= 10) {
+            log << "Losing Center!!! SEARCH!!!" << std::endl;
             searching_scale = 1;
             searching_time = (double)ros::Time::now().toSec();
+            lose_count = 0;
             next_mode = SEARCHING;
           }
         }
@@ -338,7 +343,8 @@ void *Control_loop(void *param) {
         if(abs(errorx) < 0.8 && abs(errory) < 0.8) {
           if (find_rob.doesGroundCenterExist()) {
             pid_stable_count++;
-            if(pid_stable_count >=3) {
+            if(pid_stable_count >=2) {
+              log << "CENTER FOUND!!! WAITING NOW" << std::endl;
               next_mode = WAITING;
               robot_exist = true;
               pid_stable_count = 0;
@@ -347,6 +353,19 @@ void *Control_loop(void *param) {
           }
           else {
             pid_stable_count = 0;
+            if (abs(errorx) < 0.1 && abs(errory) < 0.1) {
+              lose_count++;
+              if (lose_count >= 10) {
+                log << "To Center Arrived!!! No Center!!!" << std::endl;
+                lose_count = 0;
+                searching_scale = 1;
+                searching_time = (double)ros::Time::now().toSec();
+                next_mode = SEARCHING;
+              }
+            }
+            else {
+              lose_count = 0;
+            }
           }
         }
         log << "errorx = " << errorx << " errory = " << errory << std::endl;
@@ -380,16 +399,15 @@ void *Control_loop(void *param) {
         else {
           pid_stable_count = 0;
         }
-        
         log << "errorx = " << errorx << "  forward = " << forwardb << std::endl;
         log << "errory = " << errory << "  leftr = " << leftr << std::endl;
         log << "robotx = " << robot_x << " roboty = " << robot_y << std::endl;
-        
         break;
       case FOLLOWROBOT:
         LogCurTime(log);
         log << "Fllow Robot" << std::endl;
         if (find_rob.doesRobotExist()) {
+          log << "Robot Exist!!!" << std::endl;
           centerx = find_rob.getRobCenter().x;
           centery = find_rob.getRobCenter().y;
           CLIP3(10.0, centerx, 590.0);
@@ -410,7 +428,8 @@ void *Control_loop(void *param) {
             if (last_robot_dir > find_rob.getRobDir()) {
               serve_stable_count++;
               if (serve_stable_count > 20) {
-                log << "Yes!!!!" << std::endl;
+                log << "Serve Direction Yes!!!!" << std::endl;
+                serve_stable_count = 0;
                 serving_flag = false;
               }
             }
@@ -448,6 +467,8 @@ void *Control_loop(void *param) {
           lose_count++;
           upd = 0;
           if (lose_count >= 4) {
+            log << "Lose Robot!!! TOROBOT" << std::endl;
+            lose_count = 0;
             next_mode = TOROBOT;
           }
         }
@@ -474,12 +495,14 @@ void *Control_loop(void *param) {
           pid.PIDReset();
         }
 #endif
+        log << "errorx = " << errorx << " errory = " << errory << std::endl;
         break;
       case SEARCHING:
 #if Old_Search
         LogCurTime(log);
         if (find_rob.doesGroundCenterExist()) {
           log << "Searched now Waiting" << endl;
+          lose_count = 0;
           next_mode = WAITING;
         }
         else {
@@ -564,6 +587,7 @@ void *Control_loop(void *param) {
             searching_scale++;
           }
         }
+        break;
 #else
         LogCurTime(log);
         log << "SEARCHING:  ";

@@ -53,7 +53,7 @@ void ExternalCamera::FindHomography() {
     std::cout << "cannot open external camera!!" << std::endl;
     return;
   }
-  InitDstPoints(5, 5);
+  InitDstPoints(4, 5);
   DataCallback data_cb;
   cv::Mat img;
   cv::namedWindow("Find Homo", WINDOW_AUTOSIZE);
