@@ -117,7 +117,11 @@ void *Control_loop(void *param) {
   VideoRecorder videoreader("/home/mozhi/Record/video_ts.txt",
                             "/home/mozhi/Record/video.avi");
 
-  ExternalCamera ex_cam(0.2);
+#if Ex_Cam_Setup
+  ExternalCamera ex_cam(0);
+#else 
+  ExternalCamera ex_cam(0.25);
+#endif
   double img_time;
   ROSThread thread(imureader, videoreader, cmdreader, ex_cam, drone_NI);
   thread.showVideo = true;
@@ -445,10 +449,18 @@ void *Control_loop(void *param) {
             if (find_rob.getRobDir() > 0.5 && 
                 find_rob.getRobDir() < (2.5 - random_angle) && !serving_flag) {
 
-              ex_cam.getRobotPosition(robot_x, robot_y);
-              last_robot_x = robot_x;
-              last_robot_y = robot_y;
-              drone_NI.Clear();
+              if(ex_cam.isRobotExists()) {
+                log << "robot exist" << std::endl;
+                ex_cam.getRobotPosition(robot_x, robot_y);
+                last_robot_x = robot_x;
+                last_robot_y = robot_y;
+                drone_NI.Clear();
+              }
+              else {
+                log << "no robot exist" << std::endl;
+                last_robot_x = 0;
+                last_robot_y = 0;
+              }
               pid.PIDReset();
               if (abs(robot_x) > 0.8 && abs(robot_y) > 0.8) {
                 next_mode = TOCENTER;
@@ -726,7 +738,7 @@ void *Control_loop(void *param) {
       default:
         break;
       }
-      std::cout << find_rob.isGroundEdge() << std::endl;
+      //std::cout << find_rob.isGroundEdge() << std::endl;
     }
     lostframe++;
     if (lostframe > 3000) {

@@ -165,11 +165,15 @@ void ExternalCamera::ImageProcess() {
     }
     if (robR > 20) {
       robotexist = true;
+      cvCircle(&img, cvPointFrom32f(robcenter), cvRound(robR),
+          CV_RGB(255, 255, 255), 3, 8 ,0);
+
       RobotPosition rob_pos((400 - robcenter.y)*1.8 / 300, 
           (400 - robcenter.x)*1.8 / 300);//calculate the real position
 
-      rob_pos.x_ -=0.09 * (rob_pos.x_ + 4.46);
-      rob_pos.y_ *= 0.9;
+      rob_pos.x_ -= 0.257 * (rob_pos.x_ + 1.079);
+      rob_pos.y_ -= 0.25 * (rob_pos.y_ - 2.31);
+      //rob_pos.y_ *= 0.9;
       position_buffer_.push_back(rob_pos);
       if (position_buffer_.size() > 10) {
         position_buffer_.pop_front();
