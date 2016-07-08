@@ -6,12 +6,12 @@
 #include "FindRob.h"
 
 //1-main switch for the following show many images for test,0-close the function
-#define TestShowImg 0
+#define TestShowImg 1
 
 //1-show robot threshold pic,0-close the function
-#define ShowRobotT 1
+#define ShowRobotT 0
 //1-show ground threshold pic,0-close the function
-#define ShowGroundT 1
+#define ShowGroundT 0
 //1-show ground center threshold pic,0-close the function
 #define ShowGroundCenterT 1
 
@@ -97,7 +97,7 @@ void FindRob::ReInit(IplImage *img)
       else
         r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=0;
 
-      if(b<20 && c<20 && a>40)//for blue,
+      if(b<20 && c<20 && a>80)//for blue,
       {          
         s[i*ImgForBlue->nChannels+(j)*ImgForBlue->widthStep]=255;          
       }
@@ -429,7 +429,12 @@ void FindRob::FindGroundCenter(IplImage *src)
 
   if(FlagAnaGrou == 0)
     AnalyzeGround(ImgForYellow);
-  cvErode(src,src,NULL,2);
+
+  if(isEdge != 0) {
+    FlagFindGrCenter = 1;
+    return;
+  }
+  cvErode(src,src,NULL,4);
 #if TestShowImg && ShowGroundCenterT
   cvNamedWindow("ground center blue threshold",0);
   cvShowImage("ground center blue threshold", ImgForBlue);

@@ -136,12 +136,19 @@ void ExternalCamera::ImageProcess() {
       bl = (int)p[i*sourImg->nChannels + j*sourImg->widthStep];
       gr = (int)p[i*sourImg->nChannels + j*sourImg->widthStep+1];
       re = (int)p[i*sourImg->nChannels + j*sourImg->widthStep+2];
-      if ((re - bl) > 50 && (re - gr)>50)
+      if ((re - bl) > 25 && (re - gr)>25 && re < 200)
         q[i*Imgthresh->nChannels + j*Imgthresh->widthStep] = 255;
       else
         q[i*Imgthresh->nChannels + j*Imgthresh->widthStep] = 0;
     }
   }
+  cvErode(Imgthresh, Imgthresh, NULL, 2);
+  cvDilate(Imgthresh, Imgthresh, NULL, 6);
+  /*
+  cvNamedWindow("Imgthresh", 1);
+  cvShowImage("Imgthresh", Imgthresh);
+  cvWaitKey(1);
+  */
 
   CvMemStorage *storage = cvCreateMemStorage(0);
   CvSeq *contour = 0, *robcont = 0, *tempcont = 0;
@@ -171,9 +178,9 @@ void ExternalCamera::ImageProcess() {
       RobotPosition rob_pos((400 - robcenter.y)*1.8 / 300, 
           (400 - robcenter.x)*1.8 / 300);//calculate the real position
 
-      rob_pos.x_ -= 0.257 * (rob_pos.x_ + 1.079);
-      rob_pos.y_ -= 0.25 * (rob_pos.y_ - 2.31);
-      //rob_pos.y_ *= 0.9;
+      rob_pos.x_ -= 0.01832 * (rob_pos.x_ + 18.40);
+      //rob_pos.y_ -= 0.25 * (rob_pos.y_ - 2.31);
+      rob_pos.y_ *= 0.93;
       position_buffer_.push_back(rob_pos);
       if (position_buffer_.size() > 10) {
         position_buffer_.pop_front();

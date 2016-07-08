@@ -227,6 +227,7 @@ void *Control_loop(void *param) {
       *imgsrc = imgmat;
       find_rob.ReInit(imgsrc);
       find_rob.doesRobotExist();
+      find_rob.doesGroundCenterExist();
       switch (cur_mode) {
       case START:
         LogCurTime(log);
@@ -347,7 +348,7 @@ void *Control_loop(void *param) {
         if(abs(errorx) < 0.8 && abs(errory) < 0.8) {
           if (find_rob.doesGroundCenterExist()) {
             pid_stable_count++;
-            if(pid_stable_count >=2) {
+            if(pid_stable_count >=3) {
               log << "CENTER FOUND!!! WAITING NOW" << std::endl;
               next_mode = WAITING;
               robot_exist = true;
@@ -443,7 +444,7 @@ void *Control_loop(void *param) {
             last_robot_dir = find_rob.getRobDir();
           }
 
-          if (abs(errorx) < 30 && abs(errory) < 30) {
+          if (abs(errorx) < 40 && abs(errory) < 40) {
             forwardb = 0;
             leftr = 0;
             if (find_rob.getRobDir() > 0.5 && 
@@ -513,11 +514,15 @@ void *Control_loop(void *param) {
 #if Old_Search
         LogCurTime(log);
         if (find_rob.doesGroundCenterExist()) {
-          log << "Searched now Waiting" << endl;
-          lose_count = 0;
-          next_mode = WAITING;
+          lose_count++;
+          if(lose_count >=3) {
+            log << "Searched now Waiting" << endl;
+            next_mode = WAITING;
+            lose_count = 0;
+          }
         }
         else {
+          lose_count = 0;
           log << "SEARCHING Center!!" << std::endl;
           if ((double)ros::Time::now().toSec() <
               searching_time + 1 * searching_scale) {
@@ -732,7 +737,7 @@ void *Control_loop(void *param) {
         drone_tf.SetRefPose(0, img_time);
         drone_NI.Clear();
         leave_robot_x = -1;
-        leave_robot_y = -1.5;
+        leave_robot_y = -0.5;
         next_mode = LEAVEROBOT;
         break;
       default:
