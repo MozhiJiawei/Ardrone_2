@@ -144,6 +144,8 @@ void ExternalCamera::ImageProcess() {
   }
   cvErode(Imgthresh, Imgthresh, NULL, 2);
   cvDilate(Imgthresh, Imgthresh, NULL, 6);
+  cv::Mat tmpImg(Imgthresh);
+  img_enemy_ = tmpImg.clone();
   /*
   cvNamedWindow("Imgthresh", 1);
   cvShowImage("Imgthresh", Imgthresh);
@@ -253,8 +255,8 @@ void ExternalCamera::Loop() {
     cv::warpPerspective(camera_img_, img_me_, homography_me_, 
         cv::Size(800, 700));
 
-    cv::warpPerspective(camera_img_, img_enemy_, homography_enemy_,
-        cv::Size(800, 700));
+    //cv::warpPerspective(camera_img_, img_enemy_, homography_enemy_,
+    //    cv::Size(800, 700));
 
     pthread_mutex_unlock(&mutex_);
     ImageProcess();

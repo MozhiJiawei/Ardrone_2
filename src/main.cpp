@@ -53,6 +53,8 @@ using namespace std;
 #define Old_Search 1
 #define Odo_Test 0
 #define Ex_Cam_Setup 0
+#define Find_Rob_Test 0
+#define Imediate_Leave 0
 
 static int mGrids = 5;
 static int nGrids = 6;
@@ -199,7 +201,7 @@ void *Control_loop(void *param) {
   int edge;
 
   cvNamedWindow("Drone_Video", 1);
-  cv::namedWindow("Ex_Video");
+  cv::namedWindow("Ex_Video", 1);
   cvMoveWindow("Drone_Video", 600, 350);
   srand(time(NULL));
 #if Ex_Cam_Setup
@@ -226,8 +228,10 @@ void *Control_loop(void *param) {
       videoreader.getImage(imgmat, img_time);
       *imgsrc = imgmat;
       find_rob.ReInit(imgsrc);
+#if Find_Rob_Test
       find_rob.doesRobotExist();
       find_rob.doesGroundCenterExist();
+#endif
       switch (cur_mode) {
       case START:
         LogCurTime(log);
@@ -444,9 +448,39 @@ void *Control_loop(void *param) {
             last_robot_dir = find_rob.getRobDir();
           }
 
-          if (abs(errorx) < 40 && abs(errory) < 40) {
+#if Imediate_Leave
+          if (find_rob.getRobDir() > 0.5 && 
+              find_rob.getRobDir() < (2.5 - random_angle) && !serving_flag) {
+
+            if(ex_cam.isRobotExists()) {
+              log << "robot exist" << std::endl;
+              ex_cam.getRobotPosition(robot_x, robot_y);
+              last_robot_x = robot_x;
+              last_robot_y = robot_y;
+              drone_NI.Clear();
+            }
+            else {
+              log << "no robot exist" << std::endl;
+              last_robot_x = 0;
+              last_robot_y = 0;
+            }
+            pid.PIDReset();
+            if (abs(robot_x) > 0.8 && abs(robot_y) > 0.8) {
+              next_mode = TOCENTER;
+            }
+            else {
+              leave_robot_x = -sgn(robot_x);
+              leave_robot_y = -sgn(robot_y);
+              next_mode = LEAVEROBOT;
+            }
+            log << "Yes !!! We should Leave Robot" << std::endl;
+          }
+#endif
+          if (abs(errorx) < 30 && abs(errory) < 30) {
             forwardb = 0;
             leftr = 0;
+#if Imediate_Leave
+#else
             if (find_rob.getRobDir() > 0.5 && 
                 find_rob.getRobDir() < (2.5 - random_angle) && !serving_flag) {
 
@@ -473,6 +507,7 @@ void *Control_loop(void *param) {
               }
               log << "Yes !!! We should Leave Robot" << std::endl;
             }
+#endif
           }
           lose_count = 0;
         } 

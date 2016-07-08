@@ -97,7 +97,7 @@ void FindRob::ReInit(IplImage *img)
       else
         r[i*ImgForYellow->nChannels+(j)*ImgForYellow->widthStep]=0;
 
-      if(b<20 && c<20 && a>80)//for blue,
+      if(b<25 && c<25 && a>70)//for blue,
       {          
         s[i*ImgForBlue->nChannels+(j)*ImgForBlue->widthStep]=255;          
       }
