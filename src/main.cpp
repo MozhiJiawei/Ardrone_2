@@ -54,8 +54,8 @@ using namespace std;
 #define Odo_Test 0
 #define Ex_Cam_Setup 0
 #define Find_Rob_Test 0
-#define Imediate_Leave 0
-#define Imediate_Start 0
+#define Imediate_Leave 1
+#define Imediate_Start 1
 
 static int mGrids = 5;
 static int nGrids = 6;
@@ -483,7 +483,7 @@ void *Control_loop(void *param) {
 
 #if Imediate_Leave
           if (find_rob.getRobDir() > 0.5 && 
-              find_rob.getRobDir() < (2.5 - random_angle) && !serving_flag) {
+              find_rob.getRobDir() < 1.4 && !serving_flag) {
 
             if(ex_cam.isRobotExists()) {
               log << "robot exist" << std::endl;
@@ -515,7 +515,7 @@ void *Control_loop(void *param) {
 #if Imediate_Leave
 #else
             if (find_rob.getRobDir() > 0.5 && 
-                find_rob.getRobDir() < (2.5 - random_angle) && !serving_flag) {
+                find_rob.getRobDir() < 1.5 && !serving_flag) {
 
               if(ex_cam.isRobotExists()) {
                 log << "robot exist" << std::endl;
