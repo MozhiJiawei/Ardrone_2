@@ -239,7 +239,7 @@ void ExternalCamera::Start() {
 }
 
 void ExternalCamera::Loop() {
-  cv::VideoCapture cap(1);
+  cv::VideoCapture cap(0);
   if(!cap.isOpened()) {
     std::cout << "Cannot Open Video." << std::endl;
     return;

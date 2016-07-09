@@ -55,6 +55,7 @@ using namespace std;
 #define Ex_Cam_Setup 0
 #define Find_Rob_Test 0
 #define Imediate_Leave 0
+#define Imediate_Start 0
 
 static int mGrids = 5;
 static int nGrids = 6;
@@ -271,13 +272,44 @@ void *Control_loop(void *param) {
           CLIP3(-0.1, forwardb, 0.1);
           CLIP3(-0.2, upd, 0.2);
           turnleftr = 0;
-
+#if Imediate_Start
+          if(abs(errorturn) < 0.08 && upd == 0) {
+            turnleftr = 0;
+            log << "TakeOff Complete!!! Waitting Ex_Camera" << std::endl;
+            if (ex_cam.isRobotExists() && !ex_cam.isRobotForward()) {
+              log << "RobotExists!! TOROBOT" << std::endl;
+              drone_NI.Clear();
+              next_mode = TOROBOT;
+              pid.PIDReset();
+            }
+            if(find_rob.doesRobotExist()) {
+              log << "Robot Coming by!! FOLLOWROBOT" << std::endl;
+              next_mode = FOLLOWROBOT;
+              random_angle = double(random() % 18) / 10;
+              pid.PIDReset();
+            }
+            if(!robot_exist) {
+              if(ex_cam.isRobotExists()) {
+                robot_exist = true;
+                log << "Robot First Found" << std::endl;
+                drone_NI.Clear();
+                next_mode = TOROBOT;
+                pid.PIDReset();
+              }
+            }
+          }
+          else {
+            log << "turning" << std::endl;
+          }
+#endif
           if (abs(errorx) < 30 && abs(errory) < 30 && upd == 0) {
             errorturn = find_rob.getGroundDir();
             turnleftr = errorturn * 10;
             CLIP3(-0.15, turnleftr, 0.15);
             if(abs(errorturn) < 0.08) {
               turnleftr = 0;
+#if Imediate_Start
+#else
               log << "TakeOff Complete!!! Waitting Ex_Camera" << std::endl;
               if (ex_cam.isRobotExists() && !ex_cam.isRobotForward()) {
                 log << "RobotExists!! TOROBOT" << std::endl;
@@ -300,6 +332,7 @@ void *Control_loop(void *param) {
                   pid.PIDReset();
                 }
               }
+#endif
             }
             else {
               log << "turning" << std::endl;
