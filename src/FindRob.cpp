@@ -9,9 +9,9 @@
 #define TestShowImg 1
 
 //1-show robot threshold pic,0-close the function
-#define ShowRobotT 0
+#define ShowRobotT 1
 //1-show ground threshold pic,0-close the function
-#define ShowGroundT 0
+#define ShowGroundT 1
 //1-show ground center threshold pic,0-close the function
 #define ShowGroundCenterT 1
 
@@ -434,7 +434,7 @@ void FindRob::FindGroundCenter(IplImage *src)
     FlagFindGrCenter = 1;
     return;
   }
-  cvErode(src,src,NULL,4);
+  cvErode(src,src,NULL,5);
 #if TestShowImg && ShowGroundCenterT
   cvNamedWindow("ground center blue threshold",0);
   cvShowImage("ground center blue threshold", ImgForBlue);
