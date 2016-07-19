@@ -15,7 +15,6 @@ it needs libatlas-dev, so install sudo libatlas-dev first:<br>
 ```Bash
 sudo apt-get install libatlas-dev
 ```
-<br>
 if you meet "opencv2/nonfree/features2d.hpp: no such file exist"<br>
 try this:<br>
 ```Bash
@@ -35,16 +34,13 @@ sudo apt-get install ros-indigo-keyboard<br>
 cmake .
 make
 ```
-<br>
 if no glut.h:<br>
 ```Bash
 sudo apt-get install freeglut3-dev
 ```
-<br>
 if no -llapack:<br>
 ```Bash
 sudo apt-get install liblapack-dev
 ```
-<br>
 ###7.Learn First
 Leaning `ROS` and `Ardrone_autonomy` is strongly recomended, before you start actually coding or reading my solution.
