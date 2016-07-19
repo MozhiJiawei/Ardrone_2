@@ -25,8 +25,8 @@ sudo apt-get install libopencv-nonfree-dev<br>
 sudo apt-get install ros-indigo-keyboard<br>
 
 ###6.Download program from my github
-[Program1](https://github.com/MozhiJiawei/Ardrone_L-H)
-[Program2](https://github.com/MozhiJiawei/Ardrone_2)
+[Program1](https://github.com/MozhiJiawei/Ardrone_L-H)<br>
+[Program2](https://github.com/MozhiJiawei/Ardrone_2)<br>
 "cmake ."<br>
 "make"<br>
 <br>
@@ -37,4 +37,4 @@ if no -llapack:<br>
 sudo apt-get install liblapack-dev<br>
 <br>
 ###7.Learn First
-Leaning 'ROS' and 'Ardrone_autonomy' is strongly recomended, before you start actually coding or reading my solution.
+Leaning `ROS` and `Ardrone_autonomy` is strongly recomended, before you start actually coding or reading my solution.
