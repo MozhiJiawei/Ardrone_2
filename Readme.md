@@ -1,5 +1,5 @@
 #Building Environment
-<br><br>
+
 ###1.[Ubunut 14.04](http://my.oschina.net/zhaoqian/blog/406536 "or 12.04")
 no obstacles<br>
 
